@@ -329,13 +329,6 @@ int main()
     cout << "Enter the Python file name: ";
     cin >> file;
 
-    // ifstream pyFile(file);
-    // if (!pyFile.is_open())
-    // {
-    //     cout << "Error: Could not open file " << file << endl;
-    //     return 1;
-    // }
-
     vector<string> cleanedFileLines = removemultiline(file);
 
     string line;
@@ -571,6 +564,5 @@ int main()
     }
 
     print_symbolsTable();
-    // pyFile.close();
     return 0;
 }
