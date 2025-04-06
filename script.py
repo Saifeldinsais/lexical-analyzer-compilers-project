@@ -24,6 +24,7 @@ def myFunction(x, y=10):
     myDict = {7: "seven", 8: "eight", 9: "nine"}
     myTuple = (0, 1, 2)
     myTuple2 = (12+14)/2 # not handled as a tuple
+    ay7aga=mySet
     names = ["hey", "hello", "hi"]
     newSet = {":", ":(", ":D"} # should be a set not a dictionary
     # do something
