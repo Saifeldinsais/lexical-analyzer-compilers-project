@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <cctype>
+#include <regex>
 using namespace std;
 
 // Python keywords
@@ -11,14 +12,14 @@ vector<string> python_keywords = {
     "break", "class", "continue", "def", "del", "elif", "else", "except",
     "finally", "for", "from", "global", "if", "import", "in", "is", "lambda",
     "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
-    "match", "case"};
+    "match", "case" };
 
 vector<string> operators_list = {
     "+", "-", "", "/", "%", "*", "//",
     "=", "+=", "-=", "=", "/=", "%=", "//=", "*=", "&=", "|=", "^=", ">>=", "<<=",
     "==", "!=", ">", "<", ">=", "<=",
     "and", "or", "not",
-    "&", "|", "^", "~", "<<", ">>", "<>"};
+    "&", "|", "^", "~", "<<", ">>", "<>" };
 
 vector<string> punctuation_list = {
     "(",
@@ -56,9 +57,9 @@ void print_symbolsTable()
     }
 };
 ///////////////////////////////////////////////////////////////////
-bool isKeyword(const string &word)
+bool isKeyword(const string& word)
 {
-    for (const string &keyword : python_keywords)
+    for (const string& keyword : python_keywords)
     {
         if (word == keyword)
         {
@@ -69,9 +70,9 @@ bool isKeyword(const string &word)
 }
 ///////////////////////////////////////////////////////////////////
 
-bool isOperator(const string &word)
+bool isOperator(const string& word)
 {
-    for (const string &op : operators_list)
+    for (const string& op : operators_list)
     {
         if (word == op)
         {
@@ -82,9 +83,9 @@ bool isOperator(const string &word)
 }
 ///////////////////////////////////////////////////////////////////
 
-bool isPunctuation(const string &word)
+bool isPunctuation(const string& word)
 {
-    for (const string &punc : punctuation_list)
+    for (const string& punc : punctuation_list)
     {
         if (word == punc)
         {
@@ -94,7 +95,7 @@ bool isPunctuation(const string &word)
     return false;
 }
 ///////////////////////////////////////////////////////////////////
-bool isIsolated(size_t i, size_t length, const string &line)
+bool isIsolated(size_t i, size_t length, const string& line)
 {
     char before = (i > 0) ? line[i - 1] : ' ';
     char after = (i + length < line.size()) ? line[i + length] : ' ';
@@ -105,103 +106,34 @@ bool isIsolated(size_t i, size_t length, const string &line)
 //
 ///////////////////////////////////////////////////////////
 
-bool isNumeric(const string &word)
+
+
+bool isNumeric(const string& word)
 {
-    if (word.empty())
-        return false;
-
-    int dots = 0;
-    int digits = 0;
-    int start = 0;
-    int expoCount = 0;
-
-    if (word[0] == '-')
-    {
-        start = 1;
-        if (word.size() == 1)
-            return false; // only "-"
-    }
-
-    for (int i = start; i < word.size(); ++i)
-    {
-        if (word[i] == '.')
-        {
-            dots++;
-            if (dots > 1)
-            {
-                return false;
-            }
-        }
-        else if (word[i] == 'e' || word[i] == 'E')
-        {
-            expoCount++;
-            if (expoCount > 1)
-            {
-                return false;
-            }
-        }
-        else if (isdigit(word[i]))
-        {
-            digits++;
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    // must have at least one digit
-    return digits > 0;
+    static const regex number_regex(R"(^-?\d+(\.\d+)?)");
+    return regex_match(word, number_regex);
 }
-///////////////////////////////////////////////////////////////////
-bool isexpocase(const string &word)
-{
 
-    if (word.empty() || word.find_first_of("eE") == string::npos)
-    {
-        return false;
-    }
-
-    size_t expoPos = word.find_first_of("eE");
-
-    if (expoPos + 1 < word.size())
-    {
-
-        if (word[expoPos + 1] == '+' || word[expoPos + 1] == '-' || isdigit(word[expoPos + 1]))
-        {
-
-            for (size_t i = expoPos + 2; i < word.size(); i++)
-            {
-                if (!isdigit(word[i]))
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-    }
-
-    return false;
-}
 ///////////////////////////////////////////////////////////////////
 
-bool ishexa(const string &word)
+bool isexpocase(const string& word)
 {
-    if (word.size() > 2 && word[0] == '0' && (word[1] == 'x' || word[1] == 'X'))
-    {
-        for (int i = 2; i < word.size(); i++)
-        {
-            if (!isxdigit(word[i])) // isxdigit checks 0-9, a-f, A-F
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-    return false;
+    static const regex expo_regex(R"(^-?\d+(\.\d+)?[eE][+-]?\d+$)");
+    return regex_match(word, expo_regex);
 }
+
 ///////////////////////////////////////////////////////////////////
-int availableIdentifiers(const string &word)
+
+
+
+bool ishexa(const string& word)
+{
+    static const regex hex_regex(R"(^0[xX][0-9a-fA-F]+$)");
+    return regex_match(word, hex_regex);
+}
+
+///////////////////////////////////////////////////////////////////
+int availableIdentifiers(const string& word)
 {
     for (int i = 0; i < identifiers_list.size(); i++)
     {
@@ -223,7 +155,7 @@ string removecomments(string line)
     return line;
 }
 ////////////////////        remove multiline comments function //////////////////////////////////
-vector<string> removemultiline(const string &file)
+vector<string> removemultiline(const string& file)
 {
     ifstream pyFile(file);
 
@@ -247,7 +179,7 @@ vector<string> removemultiline(const string &file)
 
     for (int i = 0; i < allLines.size(); i++)
     {
-        string &currentLine = allLines[i];
+        string& currentLine = allLines[i];
         string newLine;
         for (size_t j = 0; j < currentLine.size(); j++)
         {
@@ -329,6 +261,13 @@ int main()
     cout << "Enter the Python file name: ";
     cin >> file;
 
+    // ifstream pyFile(file);
+    // if (!pyFile.is_open())
+    // {
+    //     cout << "Error: Could not open file " << file << endl;
+    //     return 1;
+    // }
+
     vector<string> cleanedFileLines = removemultiline(file);
 
     string line;
@@ -339,7 +278,7 @@ int main()
 
         vector<string> literals = getLiterals(cleanedLine);
 
-        for (const string &literal : literals)
+        for (const string& literal : literals)
         {
             size_t pos = cleanedLine.find(literal);
             if (pos != string::npos)
@@ -520,7 +459,7 @@ int main()
             }
             ///////////////////////////////////////////////////////////////////
             else if (c == '.' && !currentToken.empty() && isdigit(currentToken.back()) &&
-                     i + 1 < cleanedLine.size() && isdigit(cleanedLine[i + 1]))
+                i + 1 < cleanedLine.size() && isdigit(cleanedLine[i + 1]))
             {
                 currentToken += c;
             }
@@ -557,12 +496,13 @@ int main()
             currentToken.clear();
         }
         ///////////////////////////////////////////////////////////////////
-        for (const string &literal : literals)
+        for (const string& literal : literals)
         {
             cout << "<StringLiteral," << literal << ">" << endl;
         }
     }
 
     print_symbolsTable();
+    // pyFile.close();
     return 0;
 }
