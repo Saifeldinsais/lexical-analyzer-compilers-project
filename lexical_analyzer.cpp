@@ -3,467 +3,505 @@
 #include <string>
 #include <vector>
 #include <cctype>
-        using namespace std;
+using namespace std;
 
-        // Python keywords
-        vector<string> python_keywords = {
-            "False", "None", "True", "and", "as", "assert", "async", "await",
-            "break", "class", "continue", "def", "del", "elif", "else", "except",
-            "finally", "for", "from", "global", "if", "import", "in", "is", "lambda",
-            "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
-            "match", "case" };
+// Python keywords
+vector<string> python_keywords = {
+    "False", "None", "True", "and", "as", "assert", "async", "await",
+    "break", "class", "continue", "def", "del", "elif", "else", "except",
+    "finally", "for", "from", "global", "if", "import", "in", "is", "lambda",
+    "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
+    "match", "case"};
 
-        vector<string> operators_list = {
-            "+", "-", "", "/", "%", "*", "//",
-            "=", "+=", "-=", "=", "/=", "%=", "//=", "*=", "&=", "|=", "^=", ">>=", "<<=",
-            "==", "!=", ">", "<", ">=", "<=",
-            "and", "or", "not",
-            "&", "|", "^", "~", "<<", ">>", "<>" };
+vector<string> operators_list = {
+    "+", "-", "", "/", "%", "*", "//",
+    "=", "+=", "-=", "=", "/=", "%=", "//=", "*=", "&=", "|=", "^=", ">>=", "<<=",
+    "==", "!=", ">", "<", ">=", "<=",
+    "and", "or", "not",
+    "&", "|", "^", "~", "<<", ">>", "<>"};
 
-        vector<string> punctuation_list = {
-            "(",
-            ")",
-            "[",
-            "]",
-            "{",
-            "}",
-            ",",
-            ":",
-            ".",
-            ";",
-            "@",
-            "->",
-            "=>",
-            "\\",
-            "\"",
-            "'",
-            "#",
-            "...",
-        };
+vector<string> punctuation_list = {
+    "(",
+    ")",
+    "[",
+    "]",
+    "{",
+    "}",
+    ",",
+    ":",
+    ".",
+    ";",
+    "@",
+    "->",
+    "=>",
+    "\\",
+    "\"",
+    "'",
+    "#",
+    "...",
+};
 
+vector<string> identifiers_list;
+//////////////////////////////////
 
-        vector<string> identifiers_list;
-
-        void print_symbolsTable()
+void print_symbolsTable()
+{
+    cout << "---------------------------------------------" << endl;
+    cout << "table of this file" << endl;
+    cout << "---------------------------------------------" << endl;
+    cout << "|\t" << "index\t|\tidentifier\t\t|" << endl;
+    for (int i = 0; i < identifiers_list.size(); i++)
+    {
+        cout << "|\t" << i << "\t|\t" << identifiers_list[i] << "\t\t|" << endl;
+    }
+};
+///////////////////////////////////////////////////////////////////
+bool isKeyword(const string &word)
+{
+    for (const string &keyword : python_keywords)
+    {
+        if (word == keyword)
         {
-            cout << "---------------------------------------------" << endl;
-            cout << "table of this file" << endl;
-            cout << "---------------------------------------------" << endl;
-            cout << "|\t" << "index\t|\tidentifier\t\t|" << endl;
-            for (int i = 0; i < identifiers_list.size(); i++)
-            {
-                cout << "|\t" << i << "\t|\t" << identifiers_list[i] << "\t\t|" << endl;
-            }
-        };
-
-        bool isKeyword(const string & word)
-        {
-            for (const string& keyword : python_keywords)
-            {
-                if (word == keyword)
-                {
-                    return true;
-                }
-            }
-            return false;
+            return true;
         }
+    }
+    return false;
+}
+///////////////////////////////////////////////////////////////////
 
-        bool isOperator(const string & word)
+bool isOperator(const string &word)
+{
+    for (const string &op : operators_list)
+    {
+        if (word == op)
         {
-            for (const string& op : operators_list)
+            return true;
+        }
+    }
+    return false;
+}
+///////////////////////////////////////////////////////////////////
+
+bool isPunctuation(const string &word)
+{
+    for (const string &punc : punctuation_list)
+    {
+        if (word == punc)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+///////////////////////////////////////////////////////////////////
+bool isIsolated(size_t i, size_t length, const string &line)
+{
+    char before = (i > 0) ? line[i - 1] : ' ';
+    char after = (i + length < line.size()) ? line[i + length] : ' ';
+    return !(isalnum(before) || before == '_') && !(isalnum(after) || after == '_');
+}
+///////////////////////////////////////////////////////////////////
+//
+//
+///////////////////////////////////////////////////////////
+
+bool isNumeric(const string &word)
+{
+    if (word.empty())
+        return false;
+
+    int dots = 0;
+    int digits = 0;
+    int start = 0;
+    int expoCount = 0;
+
+    if (word[0] == '-')
+    {
+        start = 1;
+        if (word.size() == 1)
+            return false; // only "-"
+    }
+
+    for (int i = start; i < word.size(); ++i)
+    {
+        if (word[i] == '.')
+        {
+            dots++;
+            if (dots > 1)
             {
-                if (word == op)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool isPunctuation(const string & word)
-        {
-            for (const string& punc : punctuation_list)
-            {
-                if (word == punc)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool isIsolated(size_t i, size_t length, const string & line) // msh fahm bt3ml ehh
-        {
-            char before = (i > 0) ? line[i - 1] : ' ';
-            char after = (i + length < line.size()) ? line[i + length] : ' ';
-            return !(isalnum(before) || before == '_') && !(isalnum(after) || after == '_');
-        }
-
-        bool isNumeric(const string & word)
-        {
-            if (word.empty())
                 return false;
-
-            int dots = 0;
-            int digits = 0;
-            int start = 0;
-            int expoCount = 0;
-
-            if (word[0] == '-')
-            {
-                start = 1;
-                if (word.size() == 1)
-                    return false; // only "-"
             }
-
-            for (int i = start; i < word.size(); ++i)
+        }
+        else if (word[i] == 'e' || word[i] == 'E')
+        {
+            expoCount++;
+            if (expoCount > 1)
             {
-                if (word[i] == '.')
-                {
-                    dots++;
-                    if (dots > 1)
-                    {
-                        return false;
-                    }
-                }
-                else if (word[i] == 'e' || word[i] == 'E')
-                {
-                    expoCount++;
-                    if (expoCount > 1)
-                    {
-                        return false;
-                    }
+                return false;
+            }
+        }
+        else if (isdigit(word[i]))
+        {
+            digits++;
+        }
+        else
+        {
+            return false;
+        }
+    }
 
-                }
-                else if (isdigit(word[i]))
-                {
-                    digits++;
-                }
-                else
+    // must have at least one digit
+    return digits > 0;
+}
+///////////////////////////////////////////////////////////////////
+bool isexpocase(const string &word)
+{
+
+    if (word.empty() || word.find_first_of("eE") == string::npos)
+    {
+        return false;
+    }
+
+    size_t expoPos = word.find_first_of("eE");
+
+    if (expoPos + 1 < word.size())
+    {
+
+        if (word[expoPos + 1] == '+' || word[expoPos + 1] == '-' || isdigit(word[expoPos + 1]))
+        {
+
+            for (size_t i = expoPos + 2; i < word.size(); i++)
+            {
+                if (!isdigit(word[i]))
                 {
                     return false;
                 }
             }
-
-            // must have at least one digit
-            return digits > 0;
+            return true;
         }
-        bool isexpocase(const string& word) {
-           
-            if (word.empty() || word.find_first_of("eE") == string::npos) {
+    }
+
+    return false;
+}
+///////////////////////////////////////////////////////////////////
+
+bool ishexa(const string &word)
+{
+    if (word.size() > 2 && word[0] == '0' && (word[1] == 'x' || word[1] == 'X'))
+    {
+        for (int i = 2; i < word.size(); i++)
+        {
+            if (!isxdigit(word[i])) // isxdigit checks 0-9, a-f, A-F
+            {
                 return false;
             }
-
-            
-            size_t expoPos = word.find_first_of("eE");
-
-            
-            if (expoPos + 1 < word.size()) {
-               
-                if (word[expoPos + 1] == '+' || word[expoPos + 1] == '-' || isdigit(word[expoPos + 1])) {
-                    
-                    for (size_t i = expoPos + 2; i < word.size(); i++) {
-                        if (!isdigit(word[i])) {
-                            return false; 
-                        }
-                    }
-                    return true; 
-                }
-            }
-
-            return false; 
         }
-
-
-        bool ishexa(const string & word)
+        return true;
+    }
+    return false;
+}
+///////////////////////////////////////////////////////////////////
+int availableIdentifiers(const string &word)
+{
+    for (int i = 0; i < identifiers_list.size(); i++)
+    {
+        if (word == identifiers_list[i])
         {
-            if (word.size() > 2 && word[0] == '0' && (word[1] == 'x' || word[1] == 'X'))
-            {
-                for (int i = 2; i < word.size(); i++)
-                {
-                    if (!isxdigit(word[i])) // isxdigit checks 0-9, a-f, A-F
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            return false;
+            return i;
         }
+    }
+    return -1;
+};
+///////////////////////////////////////////////////////////////////
+string removecomments(string line)
+{
+    size_t singleCommentPos = line.find('#');
+    if (singleCommentPos != string::npos)
+    {
+        line = line.substr(0, singleCommentPos);
+    }
+    return line;
+}
+////////////////////        remove multiline comments function //////////////////////////////////
+vector<string> removemultiline(const string &file)
+{
+    ifstream pyFile(file);
 
-        int availableIdentifiers(const string & word)
+    vector<string> cleanedLines;
+    vector<string> allLines;
+    string line;
+    bool in_multiline_comment = false;
+    string comment_char;
+
+    if (!pyFile.is_open())
+    {
+        cout << "Could not open file.\n";
+        return cleanedLines;
+    }
+
+    while (getline(pyFile, line))
+    {
+        allLines.push_back(line);
+    }
+    pyFile.close();
+
+    for (int i = 0; i < allLines.size(); i++)
+    {
+        string &currentLine = allLines[i];
+        string newLine;
+        for (size_t j = 0; j < currentLine.size(); j++)
         {
-            for (int i = 0; i < identifiers_list.size(); i++)
+            if (!in_multiline_comment && j + 2 < currentLine.size())
             {
-                if (word == identifiers_list[i])
+                string current_three = currentLine.substr(j, 3);
+
+                if (current_three == "\"\"\"" || current_three == "'''")
                 {
-                    return i;
+                    in_multiline_comment = true;
+                    comment_char = current_three;
+                    j = j + 2;
+                    continue;
                 }
             }
-            return -1;
-        };
-
-        string removecomments(string line)
-        {
-            size_t singleCommentPos = line.find('#');
-            if (singleCommentPos != string::npos)
+            else if (in_multiline_comment && j + 2 < currentLine.size())
             {
-                line = line.substr(0, singleCommentPos);
+                string current_three = currentLine.substr(j, 3);
+                if (current_three == comment_char)
+                {
+                    in_multiline_comment = false;
+                    comment_char.clear();
+                    j += 2;
+                    continue;
+                }
             }
-            return line;
+
+            if (!in_multiline_comment)
+            {
+                newLine += currentLine[j];
+            }
         }
+        cleanedLines.push_back(newLine);
+    }
+    return cleanedLines;
+}
+///////////////////////////////////////////////////////////////////
+vector<string> getLiterals(string line)
+{
+    vector<string> literals;
+    size_t startPos = 0;
 
-        vector<string> getLiterals(string line)
+    while ((startPos = line.find('"', startPos)) != string::npos)
+    {
+        size_t endPos = line.find('"', startPos + 1);
+        if (endPos != string::npos)
         {
-            vector<string> literals;
-            size_t startPos = 0;
 
-            while ((startPos = line.find('"', startPos)) != string::npos)
-            {
-                size_t endPos = line.find('"', startPos + 1);
-                if (endPos != string::npos)
-                {
-                    literals.push_back(line.substr(startPos, endPos - startPos + 1));
-                    startPos = endPos + 1;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            startPos = 0;
-            while ((startPos = line.find('\'', startPos)) != string::npos)
-            {
-                size_t endPos = line.find('\'', startPos + 1);
-                if (endPos != string::npos)
-                {
-                    literals.push_back(line.substr(startPos, endPos - startPos + 1));
-                    startPos = endPos + 1;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            return literals;
+            literals.push_back(line.substr(startPos, endPos - startPos + 1));
+            startPos = endPos + 1;
         }
-
-        int main()
+        else
         {
-            string file;
-            cout << "Enter the Python file name: ";
-            cin >> file;
+            break;
+        }
+    }
 
-            ifstream pyFile(file);
-            if (!pyFile.is_open())
+    startPos = 0;
+    while ((startPos = line.find('\'', startPos)) != string::npos)
+    {
+        size_t endPos = line.find('\'', startPos + 1);
+        if (endPos != string::npos)
+        {
+            literals.push_back(line.substr(startPos, endPos - startPos + 1));
+            startPos = endPos + 1;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return literals;
+}
+///////////////////////////////////////////////////////////////////
+int main()
+{
+    string file;
+    cout << "Enter the Python file name: ";
+    cin >> file;
+
+    // ifstream pyFile(file);
+    // if (!pyFile.is_open())
+    // {
+    //     cout << "Error: Could not open file " << file << endl;
+    //     return 1;
+    // }
+
+    vector<string> cleanedFileLines = removemultiline(file);
+
+    string line;
+    for (string line : cleanedFileLines)
+    {
+
+        string cleanedLine = removecomments(line);
+
+        vector<string> literals = getLiterals(cleanedLine);
+
+        for (const string &literal : literals)
+        {
+            size_t pos = cleanedLine.find(literal);
+            if (pos != string::npos)
             {
-                cout << "Error: Could not open file " << file << endl;
-                return 1;
+                cleanedLine.replace(pos, literal.length(), string(literal.length(), ' '));
             }
+        }
+        ///////////////////////////////////////////////////////////////////
+        string currentToken;
+        for (size_t i = 0; i < cleanedLine.size(); i++)
+        {
+            char c = cleanedLine[i];
 
-            string line;
-            while (getline(pyFile, line))
+            string one_syntax(1, c);
+            string two_syntax = (i + 1 < cleanedLine.size()) ? cleanedLine.substr(i, 2) : "XXXX";
+            string three_syntax = (i + 2 < cleanedLine.size()) ? cleanedLine.substr(i, 3) : "XXXX";
+            ///////////////////////////////////////////////////////////////////
+            if ((isOperator(three_syntax) && isIsolated(i, 3, cleanedLine)) || isPunctuation(three_syntax))
             {
-
-                string cleanedLine = removecomments(line);
-
-                vector<string> literals = getLiterals(cleanedLine);
-
-                for (const string& literal : literals)
+                if (!currentToken.empty())
                 {
-                    size_t pos = cleanedLine.find(literal);
-                    if (pos != string::npos)
+                    if (isKeyword(currentToken))
                     {
-                        cleanedLine.replace(pos, literal.length(), string(literal.length(), ' '));
-                    }
-                }
-
-                string currentToken;
-                for (size_t i = 0; i < cleanedLine.size(); i++)
-                {
-                    char c = cleanedLine[i];
-
-                    string one_syntax(1, c);
-                    string two_syntax = (i + 1 < cleanedLine.size()) ? cleanedLine.substr(i, 2) : "XXXX";
-                    string three_syntax = (i + 2 < cleanedLine.size()) ? cleanedLine.substr(i, 3) : "XXXX";
-
-                    if ((isOperator(three_syntax) && isIsolated(i, 3, cleanedLine)) || isPunctuation(three_syntax))
-                    {
-                        if (!currentToken.empty())
-                        {
-                            if (isKeyword(currentToken))
-                            {
-                                cout << "<Keyword," << currentToken << ">" << endl;
-                                currentToken.clear();
-                            }
-                            else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
-                            {
-                                cout << "Numeric: <" << currentToken << ">" << endl;
-                                currentToken.clear();
-                            }
-                            else
-                            {
-                                if (availableIdentifiers(currentToken) == -1)
-                                {
-                                    identifiers_list.push_back(currentToken);
-                                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                                }
-                                else
-                                {
-                                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                                }
-                                currentToken.clear();
-                            }
-                        }
-
-                        if (isOperator(three_syntax))
-                        {
-                            cout << "Operator: <" << three_syntax << ">" << endl;
-                            i = i + 2;
-                            currentToken.clear();
-                        }
-                        else
-                        {
-                            cout << "Punctuation: <" << three_syntax << ">" << endl;
-                            i = i + 2;
-                            currentToken.clear();
-                        }
-
-                        continue;
-                    }
-
-                    if ((isOperator(two_syntax) && isIsolated(i, 2, cleanedLine)) || isPunctuation(two_syntax))
-                    {
-                        if (!currentToken.empty())
-                        {
-                            if (isKeyword(currentToken))
-                            {
-                                cout << "<Keyword," << currentToken << ">" << endl;
-                                currentToken.clear();
-                            }
-                            else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
-                            {
-                                cout << "Numeric: <" << currentToken << ">" << endl;
-                                currentToken.clear();
-                            }
-
-                            else
-                            {
-                                if (availableIdentifiers(currentToken) == -1)
-                                {
-                                    identifiers_list.push_back(currentToken);
-                                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                                }
-                                else
-                                {
-                                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                                }
-                                currentToken.clear();
-                            }
-                        }
-
-                        if (isOperator(two_syntax))
-                        {
-                            cout << "Operator: <" << two_syntax << ">" << endl;
-                            i = i + 1;
-                            currentToken.clear();
-                        }
-                        else
-                        {
-                            cout << "Punctuation: <" << two_syntax << ">" << endl;
-                            i = i + 1;
-                            currentToken.clear();
-                        }
-
-                        continue;
-                    }
-
-                    if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine)) || isPunctuation(one_syntax) && !(c == '.' && i > 0 && i + 1 < cleanedLine.size() && isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))
-                    {
-                        if (!currentToken.empty())
-                        {
-                            if (isKeyword(currentToken))
-                            {
-                                cout << "<Keyword," << currentToken << ">" << endl;
-                                currentToken.clear();
-                            }
-                            else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
-                            {
-                                cout << "Numeric: <" << currentToken << ">" << endl;
-                                currentToken.clear();
-                            }
-
-                            else
-                            {
-                                if (availableIdentifiers(currentToken) == -1)
-                                {
-                                    identifiers_list.push_back(currentToken);
-                                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                                }
-                                else
-                                {
-                                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                                }
-                                currentToken.clear();
-                            }
-                        }
-
-                        if (isOperator(one_syntax))
-                        {
-                            cout << "Operator: <" << one_syntax << ">" << endl;
-                            currentToken.clear();
-                        }
-                        else
-                        {
-                            cout << "Punctuation: <" << one_syntax << ">" << endl;
-                            currentToken.clear();
-                        }
-
-                        continue;
-                    }
-
-                    if (isspace(c))
-                    {
-                        if (!currentToken.empty())
-                        {
-                            if (isKeyword(currentToken))
-                            {
-                                cout << "<Keyword," << currentToken << ">" << endl;
-                            } 
-                            else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
-                            {
-                                cout << "Numeric: <" << currentToken << ">" << endl;
-                            }
-
-                            else if (availableIdentifiers(currentToken) == -1)
-                            {
-                                identifiers_list.push_back(currentToken);
-                                cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                            }
-                            else
-                            {
-                                cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
-                            }
-                        }
+                        cout << "<Keyword," << currentToken << ">" << endl;
                         currentToken.clear();
                     }
-                    else if (c == '.' && !currentToken.empty() && isdigit(currentToken.back()) &&
-                        i + 1 < cleanedLine.size() && isdigit(cleanedLine[i + 1]))
+                    else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
                     {
-                        currentToken += c;
-                    }
-                    else if (isalnum(c) || c == '_')
-                    {
-                        currentToken += c;
+                        cout << "Numeric: <" << currentToken << ">" << endl;
+                        currentToken.clear();
                     }
                     else
                     {
-                        currentToken += c;
+                        if (availableIdentifiers(currentToken) == -1)
+                        {
+                            identifiers_list.push_back(currentToken);
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        }
+                        else
+                        {
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        }
+                        currentToken.clear();
                     }
                 }
+                ///////////////////////////////////////////////////////////////////
+                if (isOperator(three_syntax))
+                {
+                    cout << "Operator: <" << three_syntax << ">" << endl;
+                    i = i + 2;
+                    currentToken.clear();
+                }
+                else
+                {
+                    cout << "Punctuation: <" << three_syntax << ">" << endl;
+                    i = i + 2;
+                    currentToken.clear();
+                }
 
+                continue;
+            }
+            ///////////////////////////////////////////////////////////////////
+            if ((isOperator(two_syntax) && isIsolated(i, 2, cleanedLine)) || isPunctuation(two_syntax))
+            {
+                if (!currentToken.empty())
+                {
+                    if (isKeyword(currentToken))
+                    {
+                        cout << "<Keyword," << currentToken << ">" << endl;
+                        currentToken.clear();
+                    }
+                    else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+                    {
+                        cout << "Numeric: <" << currentToken << ">" << endl;
+                        currentToken.clear();
+                    }
+                    ///////////////////////////////////////////////////////////////////
+                    else
+                    {
+                        if (availableIdentifiers(currentToken) == -1)
+                        {
+                            identifiers_list.push_back(currentToken);
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        }
+                        else
+                        {
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        }
+                        currentToken.clear();
+                    }
+                }
+                ///////////////////////////////////////////////////////////////////
+                if (isOperator(two_syntax))
+                {
+                    cout << "Operator: <" << two_syntax << ">" << endl;
+                    i = i + 1;
+                    currentToken.clear();
+                }
+                ///////////////////////////////////////////////////////////////////
+                else
+                {
+                    cout << "Punctuation: <" << two_syntax << ">" << endl;
+                    i = i + 1;
+                    currentToken.clear();
+                }
+
+                continue;
+            }
+            ///////////////////////////////////////////////////////////////////
+            if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine)) || isPunctuation(one_syntax) && !(c == '.' && i > 0 && i + 1 < cleanedLine.size() && isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))
+            {
+                if (!currentToken.empty())
+                {
+                    if (isKeyword(currentToken))
+                    {
+                        cout << "<Keyword," << currentToken << ">" << endl;
+                        currentToken.clear();
+                    }
+                    else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+                    {
+                        cout << "Numeric: <" << currentToken << ">" << endl;
+                        currentToken.clear();
+                    }
+                    ///////////////////////////////////////////////////////////////////
+                    else
+                    {
+                        if (availableIdentifiers(currentToken) == -1)
+                        {
+                            identifiers_list.push_back(currentToken);
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        }
+                        else
+                        {
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        }
+                        currentToken.clear();
+                    }
+                }
+                ///////////////////////////////////////////////////////////////////
+                if (isOperator(one_syntax))
+                {
+                    cout << "Operator: <" << one_syntax << ">" << endl;
+                    currentToken.clear();
+                }
+                else
+                {
+                    cout << "Punctuation: <" << one_syntax << ">" << endl;
+                    currentToken.clear();
+                }
+
+                continue;
+            }
+            ///////////////////////////////////////////////////////////////////
+            if (isspace(c))
+            {
                 if (!currentToken.empty())
                 {
                     if (isKeyword(currentToken))
@@ -478,22 +516,61 @@
                     else if (availableIdentifiers(currentToken) == -1)
                     {
                         identifiers_list.push_back(currentToken);
-                        cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                        cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
                     }
                     else
                     {
-                        cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                        cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
                     }
-                    currentToken.clear();
                 }
-
-                for (const string& literal : literals)
-                {
-                    cout << "<StringLiteral," << literal << ">" << endl;
-                }
+                currentToken.clear();
+            }
+            ///////////////////////////////////////////////////////////////////
+            else if (c == '.' && !currentToken.empty() && isdigit(currentToken.back()) &&
+                     i + 1 < cleanedLine.size() && isdigit(cleanedLine[i + 1]))
+            {
+                currentToken += c;
+            }
+            else if (isalnum(c) || c == '_')
+            {
+                currentToken += c;
+            }
+            else
+            {
+                currentToken += c;
+            }
+        }
+        ///////////////////////////////////////////////////////////////////
+        if (!currentToken.empty())
+        {
+            if (isKeyword(currentToken))
+            {
+                cout << "<Keyword," << currentToken << ">" << endl;
+            }
+            else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+            {
+                cout << "Numeric: <" << currentToken << ">" << endl;
             }
 
-            print_symbolsTable();
-            pyFile.close();
-            return 0;
+            else if (availableIdentifiers(currentToken) == -1)
+            {
+                identifiers_list.push_back(currentToken);
+                cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+            }
+            else
+            {
+                cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+            }
+            currentToken.clear();
         }
+        ///////////////////////////////////////////////////////////////////
+        for (const string &literal : literals)
+        {
+            cout << "<StringLiteral," << literal << ">" << endl;
+        }
+    }
+
+    print_symbolsTable();
+    // pyFile.close();
+    return 0;
+}

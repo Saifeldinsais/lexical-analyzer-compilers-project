@@ -2,6 +2,12 @@ def find_word_in_string(text, word):
     text = text.lower()
     word = word.lower()
     return word in text
+
+
+"""
+ay 7aga ay 7aga ay 7aga ay 7aga ay 7aga'''
+"""
+'''hello hello hello hello'''; idk = 11
 #a7a
 def main():
     print("Welcome to the Word Finder!")
