@@ -12,7 +12,7 @@ vector<string> python_keywords = {
     "break", "class", "continue", "def", "del", "elif", "else", "except",
     "finally", "for", "from", "global", "if", "import", "in", "is", "lambda",
     "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
-    "match", "case"};
+    "match", "case", "print"};
 
 vector<string> operators_list = {
     "+", "-", "", "/", "%", "*", "//",
@@ -99,7 +99,7 @@ bool isIsolated(size_t i, size_t length, const string &line)
 {
     string op = line.substr(i, length);
 
-    if (op == "and" || op == "not" || op == "not")
+    if (op == "and" || op == "not" || op == "or")
     {
         char before = (i > 0) ? line[i - 1] : ' ';
         char after = (i + length < line.size()) ? line[i + length] : ' ';

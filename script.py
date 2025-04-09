@@ -17,6 +17,8 @@ def myFunction(x, y=10):
     """
     A function docstring
     """
+    "hello world"
+
     myList = [1, 2, 3]
     for i in myList:
         print(i)
