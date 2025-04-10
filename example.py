@@ -19,7 +19,6 @@ def main():
     value2 = 99.99
     hexadecimal = 0x0FAD
     expo = 3.33e10
-
     result = find_word_in_string(text, word)
 
     print(value)

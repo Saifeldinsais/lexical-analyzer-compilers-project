@@ -42,7 +42,13 @@ vector<string> punctuation_list = {
     "...",
 };
 
-vector<string> identifiers_list;
+struct Identifier
+{
+    string name;
+    string type;
+};
+
+vector<Identifier> identifiers_list;
 //////////////////////////////////
 
 void print_symbolsTable()
@@ -53,7 +59,7 @@ void print_symbolsTable()
     cout << "|\t" << "index\t|\tidentifier\t\t|" << endl;
     for (int i = 0; i < identifiers_list.size(); i++)
     {
-        cout << "|\t" << i << "\t|\t" << identifiers_list[i] << "\t\t|" << endl;
+        cout << "|\t" << i << "\t|\t" << identifiers_list[i].name << "\t\t|\t" << identifiers_list[i].type << "\t|" << endl;
     }
 };
 ///////////////////////////////////////////////////////////////////
@@ -137,13 +143,50 @@ int availableIdentifiers(const string &word)
 {
     for (int i = 0; i < identifiers_list.size(); i++)
     {
-        if (word == identifiers_list[i])
+        if (word == identifiers_list[i].name)
         {
             return i;
         }
     }
     return -1;
 };
+////////////////////////////////////////////////
+
+void detectDataType(const string &identifier, const string &value)
+{
+    string cleanedVal = value;
+    cleanedVal.erase(remove_if(cleanedVal.begin(), cleanedVal.end(), ::isspace), cleanedVal.end());
+
+    string type = "unknown";
+    if (cleanedVal.front() == '[')
+        type = "list";
+    else if (cleanedVal.front() == '{')
+        type = (cleanedVal.find(':') != string::npos ? "dict" : "set");
+    else if (cleanedVal.front() == '(')
+        type = "tuple";
+    else if (cleanedVal.front() == '"' || cleanedVal.front() == '\'')
+        type = "string";
+    else if (cleanedVal == "True" || cleanedVal == "False")
+        type = "bool";
+    else if (cleanedVal.find('.') != string::npos || cleanedVal.find('e') != string::npos || cleanedVal.find('E') != string::npos)
+        type = "float";
+    else if (isdigit(cleanedVal.front()) || (cleanedVal.size() > 1 && cleanedVal[0] == '-' && isdigit(cleanedVal[1])))
+        type = "int";
+    else
+    {
+        for (const auto &id : identifiers_list)
+        {
+            if (id.name == cleanedVal)
+            {
+                type = id.type;
+                break;
+            }
+        }
+    }
+
+    identifiers_list.push_back({identifier, type});
+}
+
 ///////////////////////////////////////////////////////////////////
 string removecomments(string line)
 {
@@ -189,10 +232,22 @@ vector<string> removemultiline(const string &file)
 
                 if (current_three == "\"\"\"" || current_three == "'''")
                 {
-                    in_multiline_comment = true;
-                    comment_char = current_three;
-                    j = j + 2;
-                    continue;
+                    string before_quote = currentLine.substr(0, j);
+                    if (before_quote.find('=') != string::npos)
+                    {
+
+                        newLine += current_three;
+                        j += 2;
+                        continue;
+                    }
+                    else
+                    {
+
+                        in_multiline_comment = true;
+                        comment_char = current_three;
+                        j += 2;
+                        continue;
+                    }
                 }
             }
             else if (in_multiline_comment && j + 2 < currentLine.size())
@@ -254,6 +309,7 @@ vector<string> getLiterals(string line)
 
     return literals;
 }
+
 ///////////////////////////////////////////////////////////////////
 int main()
 {
@@ -307,8 +363,11 @@ int main()
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
-                            identifiers_list.push_back(currentToken);
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                            size_t equalPos = cleanedLine.find('=');
+                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+
+                            detectDataType(currentToken, value);
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
                         else
                         {
@@ -353,7 +412,10 @@ int main()
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
-                            identifiers_list.push_back(currentToken);
+                            size_t equalPos = cleanedLine.find('=');
+                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+
+                            detectDataType(currentToken, value);
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
                         }
                         else
@@ -400,7 +462,10 @@ int main()
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
-                            identifiers_list.push_back(currentToken);
+                            size_t equalPos = cleanedLine.find('=');
+                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+
+                            detectDataType(currentToken, value);
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
                         }
                         else
@@ -440,7 +505,10 @@ int main()
 
                     else if (availableIdentifiers(currentToken) == -1)
                     {
-                        identifiers_list.push_back(currentToken);
+                        size_t equalPos = cleanedLine.find('=');
+                        string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+
+                        detectDataType(currentToken, value);
                         cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
                     }
                     else
@@ -479,7 +547,10 @@ int main()
 
             else if (availableIdentifiers(currentToken) == -1)
             {
-                identifiers_list.push_back(currentToken);
+                size_t equalPos = cleanedLine.find('=');
+                string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+
+                detectDataType(currentToken, value);
                 cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
             }
             else
