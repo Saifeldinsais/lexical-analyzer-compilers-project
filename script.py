@@ -12,12 +12,15 @@ class MyClass:
     def greet(self):
         # Greet method
         print(f"Hello, {self.name}!")
+        x = 10
 
 def myFunction(x, y=10):
     """
     A function docstring
     """
     "hello world"
+    x = 5
+
 
     myList = [1, 2, 3]
     for i in myList:
@@ -27,6 +30,8 @@ def myFunction(x, y=10):
     myTuple = (0, 1, 2)
     myTuple2 = (12+14)/2 # not handled as a tuple
     ay7aga=mySet
+    vVv = 0xABC
+    VVVVVVV = vVv
     names = ["hey", "hello", "hi"]
     newSet = {":", ":(", ":D"} # should be a set not a dictionary
     # do something

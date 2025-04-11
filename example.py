@@ -8,10 +8,11 @@ def find_word_in_string(text, word):
 ay 7aga ay 7aga ay 7aga ay 7aga ay 7aga'''
 """
 '''hello hello hello hello'''; idk = 11
-#a7a
+
+
 def main():
     print("Welcome to the Word Finder!")
-
+    
     text = input("Enter the string to search in: ")
     word = input("Enter the word you want to find: ")
     value = 88

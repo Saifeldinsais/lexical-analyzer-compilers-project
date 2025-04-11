@@ -12,7 +12,7 @@ vector<string> python_keywords = {
     "break", "class", "continue", "def", "del", "elif", "else", "except",
     "finally", "for", "from", "global", "if", "import", "in", "is", "lambda",
     "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
-    "match", "case", "print"};
+    "match", "case", "print", "f"};
 
 vector<string> operators_list = {
     "+", "-", "", "/", "%", "*", "//",
@@ -49,6 +49,7 @@ struct Identifier
 };
 
 vector<Identifier> identifiers_list;
+vector<string> functions_list;
 //////////////////////////////////
 
 void print_symbolsTable()
@@ -150,6 +151,20 @@ int availableIdentifiers(const string &word)
     }
     return -1;
 };
+/////////////////////////////////////////////////
+
+bool isFunction(const string &word)
+{
+    for (const string &function : functions_list)
+    {
+        if (word == function)
+        {
+            return true;
+        }
+    }
+    return false;
+};
+
 ////////////////////////////////////////////////
 
 void detectDataType(const string &identifier, const string &value)
@@ -158,7 +173,10 @@ void detectDataType(const string &identifier, const string &value)
     cleanedVal.erase(remove_if(cleanedVal.begin(), cleanedVal.end(), ::isspace), cleanedVal.end());
 
     string type = "unknown";
-    if (cleanedVal.front() == '[')
+
+    if (isFunction(identifier))
+        type = "function";
+    else if (cleanedVal.front() == '[')
         type = "list";
     else if (cleanedVal.front() == '{')
         type = (cleanedVal.find(':') != string::npos ? "dict" : "set");
@@ -172,15 +190,13 @@ void detectDataType(const string &identifier, const string &value)
         type = "float";
     else if (isdigit(cleanedVal.front()) || (cleanedVal.size() > 1 && cleanedVal[0] == '-' && isdigit(cleanedVal[1])))
         type = "int";
-    else
+
+    for (const auto &id : identifiers_list)
     {
-        for (const auto &id : identifiers_list)
+        if (id.name == cleanedVal)
         {
-            if (id.name == cleanedVal)
-            {
-                type = id.type;
-                break;
-            }
+            type = id.type;
+            break;
         }
     }
 
@@ -363,9 +379,13 @@ int main()
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
+                            bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                            if (isFunc)
+                            {
+                                functions_list.push_back(currentToken);
+                            }
                             size_t equalPos = cleanedLine.find('=');
                             string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
-
                             detectDataType(currentToken, value);
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
@@ -412,6 +432,12 @@ int main()
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
+                            bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                            if (isFunc)
+                            {
+                                functions_list.push_back(currentToken);
+                            }
+
                             size_t equalPos = cleanedLine.find('=');
                             string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
 
@@ -462,6 +488,13 @@ int main()
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
+
+                            bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                            if (isFunc)
+                            {
+                                functions_list.push_back(currentToken);
+                            }
+
                             size_t equalPos = cleanedLine.find('=');
                             string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
 
@@ -505,6 +538,13 @@ int main()
 
                     else if (availableIdentifiers(currentToken) == -1)
                     {
+
+                        bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                        if (isFunc)
+                        {
+                            functions_list.push_back(currentToken);
+                        }
+
                         size_t equalPos = cleanedLine.find('=');
                         string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
 
@@ -547,6 +587,13 @@ int main()
 
             else if (availableIdentifiers(currentToken) == -1)
             {
+
+                bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                if (isFunc)
+                {
+                    functions_list.push_back(currentToken);
+                }
+
                 size_t equalPos = cleanedLine.find('=');
                 string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
 
