@@ -15,9 +15,9 @@ x = 123
 y = 45.67
 z = 1_000_000
 complex_number = 5j
-invalid1 = 9var
+invalid1 = @var 
 invalid2 = _9value
-weird_string = "This is a string
+weird_string = "This is a string"
 unterminated_string = """Multi-line
 but never ends...
 

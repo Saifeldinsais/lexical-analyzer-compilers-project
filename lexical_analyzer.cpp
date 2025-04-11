@@ -326,6 +326,84 @@ vector<string> getLiterals(string line)
     return literals;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////// ERROR HANDLING ////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// unterminated multi-line comments
+
+
+
+
+//unterminated string
+bool check_unterminatedStrings(const vector<string>& lines) {
+    bool foundError = false;
+
+    for (int i = 0; i < lines.size(); i++) {
+        const string& line = lines[i];
+        int doubleQuotes = count(line.begin(), line.end(), '"');
+        int singleQuotes = count(line.begin(), line.end(), '\'');
+
+        if (doubleQuotes % 2 != 0 || singleQuotes % 2 != 0) {
+            cout << "Unterminated string at line " << i + 1 << ": " << line << endl;
+            foundError = true;
+        }
+    }
+
+    return foundError;
+}
+
+//check for numeric values validity
+
+
+
+//check for invalid charachters (NOT IN STRING LITERALS OR MULTILINE COMMENTS)
+bool check_invalidCharacters(const vector<string>& lines) {
+    regex invalidPattern(R"([\b\w]*[@$&][\w\b]*)");
+    bool inMultiline = false;
+    string quoteType = "";
+    bool errorFound = false;
+
+    for (int i = 0; i < lines.size(); ++i) {
+        string line = lines[i];
+
+        if (!inMultiline && (line.find("\"\"\"") != string::npos || line.find("'''") != string::npos)) {
+            inMultiline = true;
+            quoteType = (line.find("\"\"\"") != string::npos) ? "\"\"\"" : "'''";
+            continue;
+        } else if (inMultiline && line.find(quoteType) != string::npos) {
+            inMultiline = false;
+        }
+
+        if (inMultiline || line.find('#') == 0) continue;
+
+        line = regex_replace(line, regex(R"((\"[^\"]*\"|'[^']*'))"), "");
+
+        if (regex_search(line, invalidPattern)) {
+            cout << "Invalid identifier character at line " << i + 1 << ": " << line << endl;
+            errorFound = true;
+        }
+    }
+
+    return errorFound;
+}
+
+
+
+
+
+
+
+bool handleErrors(const vector<string>& lines){
+    bool errorFound = false; 
+    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines));
+    return errorFound;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 ///////////////////////////////////////////////////////////////////
 int main()
 {
@@ -334,6 +412,11 @@ int main()
     cin >> file;
 
     vector<string> cleanedFileLines = removemultiline(file);
+
+    if (handleErrors(cleanedFileLines)) {
+        cout << "Lexical analysis stopped due to errors." << endl;
+        return 0;
+    }
 
     string line;
     for (string line : cleanedFileLines)

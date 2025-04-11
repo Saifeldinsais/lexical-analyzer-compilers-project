@@ -5,8 +5,9 @@ def find_word_in_string(text, word):
 
 
 """
-ay 7aga ay 7aga ay 7aga ay 7aga ay 7aga'''
+ay 7aga ay 7a$$$$$ga ay 7aga ay 7aga ay 7aga'''
 """
+
 '''hello hello hello hello'''; idk = 11
 
 
@@ -21,6 +22,10 @@ def main():
     hexadecimal = 0x0FAD
     expo = 3.33e10
     result = find_word_in_string(text, word)
+    value$value = 2
+    $value = 2
+    value5$ = 3
+    
 
     print(value)
     print('the minimum value:\n' + min)
