@@ -13,18 +13,26 @@ ay 7aga ay 7a$$$$$ga ay 7aga ay 7aga ay 7aga'''
 
 def main():
     print("Welcome to the Word Finder!")
+
+    # value!
     
     text = input("Enter the string to search in: ")
     word = input("Enter the word you want to find: ")
     value = 88
     min = -99 + value
     value2 = 99.99
-    hexadecimal = 0x0FAD
-    expo = 3.33e10
+    hexadecimal == 0x0FAD
+
+    value3 = value2+value3
+    expo = 3.33e+10
     result = find_word_in_string(text, word)
-    value$value = 2
-    $value = 2
-    value5$ = 3
+
+    #error handling cases rg3hom lma t3ml elerror handling bta3 elinvalid charachters
+    # $hello
+
+    d   ps = value
+
+
     
 
     print(value)

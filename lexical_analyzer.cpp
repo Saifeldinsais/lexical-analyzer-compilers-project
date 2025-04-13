@@ -4,6 +4,8 @@
 #include <vector>
 #include <cctype>
 #include <regex>
+#include <sstream>
+
 using namespace std;
 
 // Python keywords
@@ -125,10 +127,11 @@ bool isNumeric(const string &word)
 
 ///////////////////////////////////////////////////////////////////
 
-bool isexpocase(const string &word)
-{
-    static const regex expo_regex(R"(^-?\d+(\.\d+)?[eE][+-]?\d+$)");
-    return regex_match(word, expo_regex);
+bool isexpocase(const string& line, size_t i) {
+    if ((line[i] == 'e' || line[i] == 'E') && i + 2 < line.size() && (line[i + 1] == '+' || line[i + 1] == '-') && isdigit(line[i + 2])) {
+        return true;
+    }
+    return false;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -329,22 +332,146 @@ vector<string> getLiterals(string line)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////// ERROR HANDLING ////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+bool isCommentLine(const string &line)
+{
+    bool inSingleQuote = false;
+    bool inDoubleQuote = false;
 
-// unterminated multi-line comments
+    for (size_t i = 0; i < line.length(); ++i)
+    {
+        char c = line[i];
 
+        if (c == '"' && !inSingleQuote)
+        {
+            inDoubleQuote = !inDoubleQuote;
+        }
+        else if (c == '\'' && !inDoubleQuote)
+        {
+            inSingleQuote = !inSingleQuote;
+        }
 
+        if (c == '#' || inSingleQuote || inDoubleQuote)
+        {
+            return true; // It's a comment line
+        }
+    }
 
+    return false; // No standalone '#' found
+}
 
-//unterminated string
-bool check_unterminatedStrings(const vector<string>& lines) {
+//////////////////////////////////   invalid numbers ///////////////////////////////////////
+bool check_invalidnumber(const vector<string> &lines)
+{
+    bool founderror = false;
+
+    // Regular expression to match invalid number formats (including multiple dots
+    regex invalidNumberPattern(R"(^-?\d*\.\d*\.\d*|^-?\d+\.\.$|^-?\.\d+\.|^-?\d*\.\d*e[+-]?$|^-?\d*\.e[+-]?$|^\.\.$|^\d+\.[a-zA-Z]+$)");
+
+    // Regular expression to match numbers with leading zeros (excluding '0')
+    regex leadingZeroPattern(R"(^0\d+)");
+
+    // Regular expression to match invalid exponential numbers (e.g., 1e, 2e+, 3e- without digits after 'e')
+    regex invalidExponentialPattern(R"((\d+[eE][^0-9+\-])|(\d+[eE][+\-]?$))");
+
+    ////  for invalid hexadecimal
+    regex invalid_hex_regex(R"(0[xX](?![0-9a-fA-F]+$)[^\s]*)");
+
+    for (size_t lineNum = 0; lineNum < lines.size(); ++lineNum)
+    {
+        const string &line = lines[lineNum];
+        if (isCommentLine(line))
+            continue;
+        istringstream iss(line);
+        string word;
+
+        while (iss >> word)
+        {
+
+            // Check for invalid number formats (like multiple dots)
+            if (regex_search(word, invalidNumberPattern))
+            {
+                cout << "Invalid number format found at line " << (lineNum + 1)
+                     << ": " << word << endl;
+                founderror = true;
+            }
+
+            // Check for numbers with leading zeros (excluding '0')
+            if (regex_match(word, leadingZeroPattern))
+            {
+                cout << "Invalid number with leading zeros found at line " << (lineNum + 1)
+                     << ": " << word << endl;
+                founderror = true;
+            }
+
+            // Check for invalid exponential numbers (e.g., 1e, 2e+, or missing digits after 'e')
+            if (regex_match(word, invalidExponentialPattern))
+            {
+                cout << "Invalid exponential number format found at line " << (lineNum + 1)
+                     << ": " << word << endl;
+                founderror = true;
+            }
+            if (regex_match(word, invalid_hex_regex))
+            {
+                cout << "Invalid hexadecimal number format found at line " << (lineNum + 1)
+                     << ": " << word << endl;
+                founderror = true;
+            }
+        }
+    }
+    return founderror;
+}
+
+//////////////////////////////////////////////////////////////////
+//////////////////////////////// invalid operators/////////////////////////////////
+bool check_invalid_operators(const vector<string> &lines)
+{
+    bool founderror = false;
+
+    // One combined regex pattern to match various invalid Python operators
+    static const regex invalidOperatorPattern(R"((\!\s*|\!\=|\=\+|\=\-\-|\=\+\+|\=\>\=|\<\=\>|\-\-\>|\*\*\*|\+\+|\-\-))");
+
+    for (size_t lineNum = 0; lineNum < lines.size(); ++lineNum)
+    {
+        const string &line = lines[lineNum];
+        if (isCommentLine(line))
+            continue;
+
+        istringstream iss(line);
+        string word;
+
+        while (iss >> word)
+        {
+            // Check if the word matches the invalid operator pattern
+            if (regex_search(word, invalidOperatorPattern))
+            {
+                cout << "Invalid operator found at line " << (lineNum + 1)
+                     << ": " << word << endl;
+                founderror = true;
+            }
+        }
+    }
+
+    return founderror;
+}
+
+//////////////////////////////////////////////////////////////////////////
+
+// unterminated string literals
+bool check_unterminatedStrings(const vector<string> &lines)
+{
     bool foundError = false;
 
-    for (int i = 0; i < lines.size(); i++) {
-        const string& line = lines[i];
+    for (int i = 0; i < lines.size(); i++)
+    {
+        const string &line = lines[i];
+        if (isCommentLine(line))
+            continue; // skip comment lines
+
         int doubleQuotes = count(line.begin(), line.end(), '"');
         int singleQuotes = count(line.begin(), line.end(), '\'');
 
-        if (doubleQuotes % 2 != 0 || singleQuotes % 2 != 0) {
+        if (doubleQuotes % 2 != 0 || singleQuotes % 2 != 0)
+        {
             cout << "Unterminated string at line " << i + 1 << ": " << line << endl;
             foundError = true;
         }
@@ -352,34 +479,40 @@ bool check_unterminatedStrings(const vector<string>& lines) {
 
     return foundError;
 }
+/////////////////////////////////////////////////////////////////////////////
 
-//check for numeric values validity
-
-
-
-//check for invalid charachters (NOT IN STRING LITERALS OR MULTILINE COMMENTS)
-bool check_invalidCharacters(const vector<string>& lines) {
+// check for invalid charachters (NOT IN STRING LITERALS OR MULTILINE COMMENTS)
+bool check_invalidCharacters(const vector<string> &lines)
+{
     regex invalidPattern(R"([\b\w]*[@$&][\w\b]*)");
     bool inMultiline = false;
     string quoteType = "";
     bool errorFound = false;
 
-    for (int i = 0; i < lines.size(); ++i) {
+    for (int i = 0; i < lines.size(); ++i)
+    {
         string line = lines[i];
+        if (isCommentLine(line))
+            continue;
 
-        if (!inMultiline && (line.find("\"\"\"") != string::npos || line.find("'''") != string::npos)) {
+        if (!inMultiline && (line.find("\"\"\"") != string::npos || line.find("'''") != string::npos))
+        {
             inMultiline = true;
             quoteType = (line.find("\"\"\"") != string::npos) ? "\"\"\"" : "'''";
             continue;
-        } else if (inMultiline && line.find(quoteType) != string::npos) {
+        }
+        else if (inMultiline && line.find(quoteType) != string::npos)
+        {
             inMultiline = false;
         }
 
-        if (inMultiline || line.find('#') == 0) continue;
+        if (inMultiline || line.find('#') == 0)
+            continue;
 
         line = regex_replace(line, regex(R"((\"[^\"]*\"|'[^']*'))"), "");
 
-        if (regex_search(line, invalidPattern)) {
+        if (regex_search(line, invalidPattern))
+        {
             cout << "Invalid identifier character at line " << i + 1 << ": " << line << endl;
             errorFound = true;
         }
@@ -388,23 +521,60 @@ bool check_invalidCharacters(const vector<string>& lines) {
     return errorFound;
 }
 
+bool check_invalidIdentifiers(const vector<string>& lines) {
+    bool errorFound = false;
+
+    // Check if identifier starts with a digit (but not valid hexadecimal)
+    regex startsWithDigit(R"(\b\d[a-zA-Z_]+\w*\b)");
+
+    // Contains special characters (excluding allowed symbols)
+    regex containsSpecialChars(R"(\b\w*[~!@$%^&*|\\/?,]\w*\b)");
+
+    // Valid hexadecimal (e.g., 0x1A3F)
+    regex validHex(R"(^0[xX][0-9a-fA-F]+$)");
+
+    for (size_t i = 0; i < lines.size(); ++i) {
+        istringstream iss(lines[i]);
+        string word;
+
+        while (iss >> word) {
+            if (regex_match(word, validHex)) continue;
+
+            if (regex_match(word, startsWithDigit)) {
+                cout << "Invalid identifier (starts with digit) at line " << i + 1 << ": " << word << endl;
+                errorFound = true;
+            }
+
+            if (regex_search(word, containsSpecialChars)) {
+                cout << "Invalid identifier (contains special characters) at line " << i + 1 << ": " << word << endl;
+                errorFound = true;
+            }
+
+            // Check for whitespace inside the identifier manually
+            if (word.find(' ') != string::npos || word.find('\t') != string::npos) {
+                cout << "Invalid identifier (contains space/tab) at line " << i + 1 << ": " << word << endl;
+                errorFound = true;
+            }
+        }
+    }
+
+    return errorFound;
+}
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////
 
-
-
-bool handleErrors(const vector<string>& lines){
-    bool errorFound = false; 
-    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines));
+bool handleErrors(const vector<string> &lines)
+{
+    bool errorFound = false;
+    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines) || check_invalidnumber(lines) || check_invalid_operators(lines) ||check_invalidIdentifiers(lines));
     return errorFound;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////
 int main()
 {
     string file;
@@ -413,15 +583,14 @@ int main()
 
     vector<string> cleanedFileLines = removemultiline(file);
 
-    if (handleErrors(cleanedFileLines)) {
+    if (handleErrors(cleanedFileLines))
+    {
         cout << "Lexical analysis stopped due to errors." << endl;
         return 0;
     }
 
-    string line;
     for (string line : cleanedFileLines)
     {
-
         string cleanedLine = removecomments(line);
 
         vector<string> literals = getLiterals(cleanedLine);
@@ -434,29 +603,45 @@ int main()
                 cleanedLine.replace(pos, literal.length(), string(literal.length(), ' '));
             }
         }
-        ///////////////////////////////////////////////////////////////////
+
         string currentToken;
         for (size_t i = 0; i < cleanedLine.size(); i++)
         {
             char c = cleanedLine[i];
 
+            if (isexpocase(cleanedLine, i) && !currentToken.empty()) {
+                string expoNum = currentToken + cleanedLine.substr(i, 2);
+                i += 2;
+                while (i < cleanedLine.size() && isdigit(cleanedLine[i])) {
+                    expoNum += cleanedLine[i++];
+                }
+                cout << "Numeric: <" << expoNum << ">" << endl;
+                currentToken.clear();
+                --i;
+                continue;
+            }
+
             string one_syntax(1, c);
-            string two_syntax = (i + 1 < cleanedLine.size()) ? cleanedLine.substr(i, 2) : "XXXX";
-            string three_syntax = (i + 2 < cleanedLine.size()) ? cleanedLine.substr(i, 3) : "XXXX";
-            ///////////////////////////////////////////////////////////////////
-            if ((isOperator(three_syntax) && isIsolated(i, 3, cleanedLine)) || isPunctuation(three_syntax))
+            string two_syntax = (i + 1 < cleanedLine.size()) ? cleanedLine.substr(i, 2) : "";
+            string three_syntax = (i + 2 < cleanedLine.size()) ? cleanedLine.substr(i, 3) : "";
+
+            // Check for multi-character operators or punctuation (e.g., "and", "==", "...")
+            if ((three_syntax.size() == 3 && isOperator(three_syntax) && isIsolated(i, 3, cleanedLine)) ||
+                (three_syntax.size() == 3 && isPunctuation(three_syntax)))
             {
                 if (!currentToken.empty())
                 {
                     if (isKeyword(currentToken))
                     {
                         cout << "<Keyword," << currentToken << ">" << endl;
-                        currentToken.clear();
                     }
-                    else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+                    else if (isexpocase(cleanedLine, i))
                     {
                         cout << "Numeric: <" << currentToken << ">" << endl;
-                        currentToken.clear();
+                    }
+                    else if (isNumeric(currentToken) || ishexa(currentToken))
+                    {
+                        cout << "Numeric: <" << currentToken << ">" << endl;
                     }
                     else
                     {
@@ -474,43 +659,41 @@ int main()
                         }
                         else
                         {
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
-                        currentToken.clear();
                     }
+                    currentToken.clear();
                 }
 
                 if (isOperator(three_syntax))
                 {
                     cout << "Operator: <" << three_syntax << ">" << endl;
-                    i = i + 2;
-                    currentToken.clear();
                 }
                 else
                 {
                     cout << "Punctuation: <" << three_syntax << ">" << endl;
-                    i = i + 2;
-                    currentToken.clear();
                 }
-
+                i += 2;
                 continue;
             }
-            ///////////////////////////////////////////////////////////////////
-            if ((isOperator(two_syntax) && isIsolated(i, 2, cleanedLine)) || isPunctuation(two_syntax))
+
+            if ((two_syntax.size() == 2 && isOperator(two_syntax) && isIsolated(i, 2, cleanedLine)) ||
+                (two_syntax.size() == 2 && isPunctuation(two_syntax)))
             {
                 if (!currentToken.empty())
                 {
                     if (isKeyword(currentToken))
                     {
                         cout << "<Keyword," << currentToken << ">" << endl;
-                        currentToken.clear();
                     }
-                    else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+                    else if (isexpocase(cleanedLine, i))
                     {
                         cout << "Numeric: <" << currentToken << ">" << endl;
-                        currentToken.clear();
                     }
-                    ///////////////////////////////////////////////////////////////////
+                    else if (isNumeric(currentToken) || ishexa(currentToken))
+                    {
+                        cout << "Numeric: <" << currentToken << ">" << endl;
+                    }
                     else
                     {
                         if (availableIdentifiers(currentToken) == -1)
@@ -520,92 +703,84 @@ int main()
                             {
                                 functions_list.push_back(currentToken);
                             }
-
                             size_t equalPos = cleanedLine.find('=');
                             string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
-
                             detectDataType(currentToken, value);
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
                         else
                         {
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
-                        currentToken.clear();
                     }
+                    currentToken.clear();
                 }
-                ///////////////////////////////////////////////////////////////////
+
                 if (isOperator(two_syntax))
                 {
                     cout << "Operator: <" << two_syntax << ">" << endl;
-                    i = i + 1;
-                    currentToken.clear();
                 }
-                ///////////////////////////////////////////////////////////////////
                 else
                 {
                     cout << "Punctuation: <" << two_syntax << ">" << endl;
-                    i = i + 1;
-                    currentToken.clear();
                 }
-
+                i += 1;
                 continue;
             }
-            ///////////////////////////////////////////////////////////////////
-            if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine)) || isPunctuation(one_syntax) && !(c == '.' && i > 0 && i + 1 < cleanedLine.size() && isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))
+
+            // Handle single-character operators or punctuation
+            if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine)  ||
+                (isPunctuation(one_syntax) &&
+                 !(c == '.' && i > 0 && i + 1 < cleanedLine.size() &&
+                   isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))))
             {
                 if (!currentToken.empty())
                 {
                     if (isKeyword(currentToken))
                     {
                         cout << "<Keyword," << currentToken << ">" << endl;
-                        currentToken.clear();
                     }
-                    else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+                    else if (isexpocase(cleanedLine, i))
                     {
                         cout << "Numeric: <" << currentToken << ">" << endl;
-                        currentToken.clear();
                     }
-                    ///////////////////////////////////////////////////////////////////
+                    else if (isNumeric(currentToken) || ishexa(currentToken))
+                    {
+                        cout << "Numeric: <" << currentToken << ">" << endl;
+                    }
                     else
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
-
-                            bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                            bool isFunc = cleanedLine.find("def " + currentToken + "(") != string::npos;
                             if (isFunc)
                             {
                                 functions_list.push_back(currentToken);
                             }
-
                             size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
-
+                            string value = (equalPos != string::npos && equalPos > i) ? cleanedLine.substr(equalPos + 1) : "";
                             detectDataType(currentToken, value);
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
                         else
                         {
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
-                        currentToken.clear();
                     }
+                    currentToken.clear();
                 }
-                ///////////////////////////////////////////////////////////////////
+
                 if (isOperator(one_syntax))
                 {
                     cout << "Operator: <" << one_syntax << ">" << endl;
-                    currentToken.clear();
                 }
                 else
                 {
                     cout << "Punctuation: <" << one_syntax << ">" << endl;
-                    currentToken.clear();
                 }
-
                 continue;
             }
-            ///////////////////////////////////////////////////////////////////
+
             if (isspace(c))
             {
                 if (!currentToken.empty())
@@ -614,82 +789,79 @@ int main()
                     {
                         cout << "<Keyword," << currentToken << ">" << endl;
                     }
-                    else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+                    else if (isexpocase(cleanedLine, i))
                     {
                         cout << "Numeric: <" << currentToken << ">" << endl;
                     }
-
-                    else if (availableIdentifiers(currentToken) == -1)
+                    else if (isNumeric(currentToken) || ishexa(currentToken))
                     {
-
-                        bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
-                        if (isFunc)
-                        {
-                            functions_list.push_back(currentToken);
-                        }
-
-                        size_t equalPos = cleanedLine.find('=');
-                        string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
-
-                        detectDataType(currentToken, value);
-                        cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        cout << "Numeric: <" << currentToken << ">" << endl;
                     }
                     else
                     {
-                        cout << "identifier: <id," << availableIdentifiers(currentToken) << ">" << "\t" << currentToken << endl;
+                        if (availableIdentifiers(currentToken) == -1)
+                        {
+                            bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                            if (isFunc)
+                            {
+                                functions_list.push_back(currentToken);
+                            }
+                            size_t equalPos = cleanedLine.find('=');
+                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+                            detectDataType(currentToken, value);
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                        }
+                        else
+                        {
+                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                        }
                     }
+                    currentToken.clear();
                 }
-                currentToken.clear();
-            }
-            ///////////////////////////////////////////////////////////////////
-            else if (c == '.' && !currentToken.empty() && isdigit(currentToken.back()) &&
-                     i + 1 < cleanedLine.size() && isdigit(cleanedLine[i + 1]))
-            {
-                currentToken += c;
-            }
-            else if (isalnum(c) || c == '_')
-            {
-                currentToken += c;
             }
             else
             {
-                currentToken += c;
+                currentToken += c; // Collect all characters, including number-related ones
             }
         }
-        ///////////////////////////////////////////////////////////////////
+
+        // Handle any remaining token at the end of the line
         if (!currentToken.empty())
         {
             if (isKeyword(currentToken))
             {
                 cout << "<Keyword," << currentToken << ">" << endl;
             }
-            else if (isNumeric(currentToken) || ishexa(currentToken) || isexpocase(currentToken))
+            // else if (isexpocase(cleanedLine, i))
+            // {
+            //     cout << "Numeric: <" << currentToken << ">" << endl;
+            // }
+            else if (isNumeric(currentToken) || ishexa(currentToken))
             {
                 cout << "Numeric: <" << currentToken << ">" << endl;
             }
-
-            else if (availableIdentifiers(currentToken) == -1)
-            {
-
-                bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
-                if (isFunc)
-                {
-                    functions_list.push_back(currentToken);
-                }
-
-                size_t equalPos = cleanedLine.find('=');
-                string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
-
-                detectDataType(currentToken, value);
-                cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
-            }
             else
             {
-                cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                if (availableIdentifiers(currentToken) == -1)
+                {
+                    bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
+                    if (isFunc)
+                    {
+                        functions_list.push_back(currentToken);
+                    }
+                    size_t equalPos = cleanedLine.find('=');
+                    string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+                    detectDataType(currentToken, value);
+                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                }
+                else
+                {
+                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                }
             }
             currentToken.clear();
         }
-        ///////////////////////////////////////////////////////////////////
+
         for (const string &literal : literals)
         {
             cout << "<StringLiteral," << literal << ">" << endl;
