@@ -1,3 +1,4 @@
+#include <map>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -14,7 +15,7 @@ vector<string> python_keywords = {
     "break", "class", "continue", "def", "del", "elif", "else", "except",
     "finally", "for", "from", "global", "if", "import", "in", "is", "lambda",
     "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
-    "match", "case", "print", "f"};
+    "match", "case", "print", "f", "lower", "input"};
 
 vector<string> operators_list = {
     "+", "-", "", "/", "%", "*", "//",
@@ -127,13 +128,30 @@ bool isNumeric(const string &word)
 
 ///////////////////////////////////////////////////////////////////
 
-bool isexpocase(const string& line, size_t i) {
-    if ((line[i] == 'e' || line[i] == 'E') && i + 2 < line.size() && (line[i + 1] == '+' || line[i + 1] == '-') && isdigit(line[i + 2])) {
-        return true;
+bool isexpocase(const string &line, size_t i)
+{
+    if (i == 0 || i + 2 >= line.size())
+        return false;
+
+    if (line[i] == 'e' || line[i] == 'E')
+    {
+
+        if (isdigit(line[i - 1]))
+        {
+
+            if ((line[i + 1] == '+' || line[i + 1] == '-') && isdigit(line[i + 2]))
+            {
+                return true;
+            }
+
+            if (isdigit(line[i + 1]))
+            {
+                return true;
+            }
+        }
     }
     return false;
 }
-
 ///////////////////////////////////////////////////////////////////
 
 bool ishexa(const string &word)
@@ -176,35 +194,86 @@ void detectDataType(const string &identifier, const string &value)
     cleanedVal.erase(remove_if(cleanedVal.begin(), cleanedVal.end(), ::isspace), cleanedVal.end());
 
     string type = "unknown";
-
-    if (isFunction(identifier))
-        type = "function";
-    else if (cleanedVal.front() == '[')
-        type = "list";
-    else if (cleanedVal.front() == '{')
-        type = (cleanedVal.find(':') != string::npos ? "dict" : "set");
-    else if (cleanedVal.front() == '(')
-        type = "tuple";
-    else if (cleanedVal.front() == '"' || cleanedVal.front() == '\'')
-        type = "string";
-    else if (cleanedVal == "True" || cleanedVal == "False")
-        type = "bool";
-    else if (cleanedVal.find('.') != string::npos || cleanedVal.find('e') != string::npos || cleanedVal.find('E') != string::npos)
-        type = "float";
-    else if (isdigit(cleanedVal.front()) || (cleanedVal.size() > 1 && cleanedVal[0] == '-' && isdigit(cleanedVal[1])))
-        type = "int";
+    regex functionCallPattern(R"(^[a-zA-Z_][a-zA-Z0-9_]*\(.*\)$)");
+    regex hexPattern(R"(0[xX][0-9a-fA-F]+)");
+    regex numericPattern(R"(^-?\d+(\.\d+)?([eE][+-]?\d+)?$)");
 
     for (const auto &id : identifiers_list)
-    {
-        if (id.name == cleanedVal)
-        {
-            type = id.type;
-            break;
+        if (id.name == identifier)
+            return;
+
+    if (isFunction(identifier)) {
+        type = "function";
+    }
+    else if (cleanedVal == "\"__main__\"" || cleanedVal == "'__main__'" || cleanedVal == "__main__") {
+        type = "string";
+    }
+    else if (regex_match(cleanedVal, functionCallPattern)) {
+        string fname = cleanedVal.substr(0, cleanedVal.find('('));
+        if (isFunction(fname)) {
+            type = "function_call";
         }
+    }
+    else if (regex_match(cleanedVal, hexPattern)) {
+        type = "int";
+    }
+    else if (!cleanedVal.empty() && cleanedVal.front() == '[') {
+        type = "list";
+    }
+    else if (!cleanedVal.empty() && cleanedVal.front() == '{') {
+        type = (cleanedVal.find(':') != string::npos ? "dict" : "set");
+    }
+    else if (!cleanedVal.empty() && cleanedVal.front() == '(' && cleanedVal.back() == ')') {
+        type = "tuple";
+    }
+    else if (!cleanedVal.empty() && (cleanedVal.front() == '"' || cleanedVal.front() == '\'')) {
+        type = "string";
+    }
+    else if (cleanedVal == "True" || cleanedVal == "False") {
+        type = "bool";
+    }
+    else if (regex_match(cleanedVal, numericPattern)) {
+        type = (cleanedVal.find('.') != string::npos || cleanedVal.find('e') != string::npos || cleanedVal.find('E') != string::npos) ? "float" : "int";
+    }
+    else {
+        // expression handling
+        bool hasFloat = false, hasInt = false;
+
+        string token;
+        for (size_t i = 0; i <= cleanedVal.size(); ++i) {
+            if (i < cleanedVal.size() && (isalnum(cleanedVal[i]) || cleanedVal[i] == '_' || cleanedVal[i] == '.' || cleanedVal[i] == '-')) {
+                token += cleanedVal[i];
+            } else {
+                if (!token.empty()) {
+                    if (regex_match(token, numericPattern)) {
+                        if (token.find('.') != string::npos || token.find('e') != string::npos || token.find('E') != string::npos)
+                            hasFloat = true;
+                        else
+                            hasInt = true;
+                    } else {
+                        for (const auto &id : identifiers_list) {
+                            if (id.name == token) {
+                                if (id.type == "float") hasFloat = true;
+                                else if (id.type == "int") hasInt = true;
+                                else if (type == "unknown") type = id.type;
+                                break;
+                            }
+                        }
+                    }
+                    token.clear();
+                }
+            }
+        }
+
+        if (hasFloat) type = "float";
+        else if (hasInt && type == "unknown") type = "int";
     }
 
     identifiers_list.push_back({identifier, type});
 }
+
+
+
 
 ///////////////////////////////////////////////////////////////////
 string removecomments(string line)
@@ -332,6 +401,12 @@ vector<string> getLiterals(string line)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////// ERROR HANDLING ////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+bool isCommentLine2(const string &line)
+{
+    size_t firstChar = line.find_first_not_of(" \t");
+    return firstChar != string::npos && line[firstChar] == '#';
+}
+///////////////////////////////////////////////////////////////////
 bool isCommentLine(const string &line)
 {
     bool inSingleQuote = false;
@@ -358,7 +433,6 @@ bool isCommentLine(const string &line)
 
     return false; // No standalone '#' found
 }
-
 //////////////////////////////////   invalid numbers ///////////////////////////////////////
 bool check_invalidnumber(const vector<string> &lines)
 {
@@ -464,8 +538,8 @@ bool check_unterminatedStrings(const vector<string> &lines)
     for (int i = 0; i < lines.size(); i++)
     {
         const string &line = lines[i];
-        if (isCommentLine(line))
-            continue; // skip comment lines
+        if (isCommentLine2(line))
+            continue;
 
         int doubleQuotes = count(line.begin(), line.end(), '"');
         int singleQuotes = count(line.begin(), line.end(), '\'');
@@ -521,37 +595,41 @@ bool check_invalidCharacters(const vector<string> &lines)
     return errorFound;
 }
 
-bool check_invalidIdentifiers(const vector<string>& lines) {
+bool check_invalidIdentifiers(const vector<string> &lines)
+{
     bool errorFound = false;
 
-    // Check if identifier starts with a digit (but not valid hexadecimal)
-    regex startsWithDigit(R"(\b\d[a-zA-Z_]+\w*\b)");
+    regex startsWithDigit(R"(\b\d\w*[a-zA-Z_]+\w*\b)");          // Starts with digit
+    regex containsSpecialChars(R"(\b\w*[~`!@$%^&*|\\/?]\w*\b)"); // Contains special characters
+    regex containsSpaceOrTab(R"(\b\w*[\s\t]+\w*\b)");            // Contains space or tab
+    regex validHex(R"(^0[xX][0-9a-fA-F]+$)");                    // Valid hexa to avoid errors in hexadecimal cases
 
-    // Contains special characters (excluding allowed symbols)
-    regex containsSpecialChars(R"(\b\w*[~!@$%^&*|\\/?,]\w*\b)");
-
-    // Valid hexadecimal (e.g., 0x1A3F)
-    regex validHex(R"(^0[xX][0-9a-fA-F]+$)");
-
-    for (size_t i = 0; i < lines.size(); ++i) {
-        istringstream iss(lines[i]);
+    for (size_t i = 0; i < lines.size(); ++i)
+    {
+        const string &line = lines[i];
+        if (isCommentLine(line))
+            continue;
+        istringstream iss(line);
         string word;
+        while (iss >> word)
+        {
+            if (regex_match(word, validHex))
+                continue;
 
-        while (iss >> word) {
-            if (regex_match(word, validHex)) continue;
-
-            if (regex_match(word, startsWithDigit)) {
+            if (regex_match(word, startsWithDigit))
+            {
                 cout << "Invalid identifier (starts with digit) at line " << i + 1 << ": " << word << endl;
                 errorFound = true;
             }
 
-            if (regex_search(word, containsSpecialChars)) {
+            if (regex_match(word, containsSpecialChars))
+            {
                 cout << "Invalid identifier (contains special characters) at line " << i + 1 << ": " << word << endl;
                 errorFound = true;
             }
 
-            // Check for whitespace inside the identifier manually
-            if (word.find(' ') != string::npos || word.find('\t') != string::npos) {
+            if (regex_match(word, containsSpaceOrTab))
+            {
                 cout << "Invalid identifier (contains space/tab) at line " << i + 1 << ": " << word << endl;
                 errorFound = true;
             }
@@ -561,14 +639,78 @@ bool check_invalidIdentifiers(const vector<string>& lines) {
     return errorFound;
 }
 
-
-
 /////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////// handle unclosed brackets /////////////////////////////////
+bool check_unclosedBrackets(const vector<string> &lines)
+{
+    bool errorFound = false;
+    int parenCount = 0; // 3ashan  ()
+    int braceCount = 0; // 3ashan {}
+
+    for (size_t lineNum = 0; lineNum < lines.size(); ++lineNum)
+    {
+        const string &line = lines[lineNum];
+
+        if (isCommentLine(line))
+        {
+            continue;
+        }
+
+        for (size_t i = 0; i < line.length(); ++i)
+        {
+            char c = line[i];
+
+            if (c == '(')
+            {
+                parenCount++;
+            }
+            else if (c == ')')
+            {
+                parenCount--;
+                if (parenCount < 0)
+                {
+                    cout << "Extra closing parenthesis at line " << lineNum + 1 << ": " << line << endl;
+                    errorFound = true;
+                    parenCount = 0;
+                }
+            }
+            else if (c == '{')
+            {
+                braceCount++;
+            }
+            else if (c == '}')
+            {
+                braceCount--;
+                if (braceCount < 0)
+                {
+                    cout << "Extra closing brace at line " << lineNum + 1 << ": " << line << endl;
+                    errorFound = true;
+                    braceCount = 0;
+                }
+            }
+        }
+    }
+
+    if (parenCount > 0)
+    {
+        cout << "Unclosed parenthesis detected in the file." << endl;
+        errorFound = true;
+    }
+    if (braceCount > 0)
+    {
+        cout << "Unclosed brace detected in the file." << endl;
+        errorFound = true;
+    }
+
+    return errorFound;
+}
+
+///////////////////////////////////////////////////////////
 
 bool handleErrors(const vector<string> &lines)
 {
     bool errorFound = false;
-    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines) || check_invalidnumber(lines) || check_invalid_operators(lines) ||check_invalidIdentifiers(lines));
+    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines) || check_invalidnumber(lines) || check_invalid_operators(lines) || check_invalidIdentifiers(lines) || check_unclosedBrackets(lines));
     return errorFound;
 }
 
@@ -593,6 +735,34 @@ int main()
     {
         string cleanedLine = removecomments(line);
 
+        if (line.find(',') != string::npos && line.find('=') != string::npos)
+        {
+            size_t eq = line.find('=');
+            string left = line.substr(0, eq);
+            string right = line.substr(eq + 1);
+
+            auto splitAndClean = [](const string &str, char delim)
+            {
+                vector<string> tokens;
+                stringstream stringg(str);
+                string token;
+                while (getline(stringg, token, delim))
+                {
+                    token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
+                    tokens.push_back(token);
+                }
+                return tokens;
+            };
+
+            vector<string> vars = splitAndClean(left, ',');
+            vector<string> values = splitAndClean(right, ',');
+
+            for (size_t i = 0; i < vars.size() && i < values.size(); ++i)
+            {
+                detectDataType(vars[i], values[i]);
+            }
+        }
+
         vector<string> literals = getLiterals(cleanedLine);
 
         for (const string &literal : literals)
@@ -609,10 +779,12 @@ int main()
         {
             char c = cleanedLine[i];
 
-            if (isexpocase(cleanedLine, i) && !currentToken.empty()) {
+            if (isexpocase(cleanedLine, i) && !currentToken.empty())
+            {
                 string expoNum = currentToken + cleanedLine.substr(i, 2);
                 i += 2;
-                while (i < cleanedLine.size() && isdigit(cleanedLine[i])) {
+                while (i < cleanedLine.size() && isdigit(cleanedLine[i]))
+                {
                     expoNum += cleanedLine[i++];
                 }
                 cout << "Numeric: <" << expoNum << ">" << endl;
@@ -729,10 +901,10 @@ int main()
             }
 
             // Handle single-character operators or punctuation
-            if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine)  ||
-                (isPunctuation(one_syntax) &&
-                 !(c == '.' && i > 0 && i + 1 < cleanedLine.size() &&
-                   isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))))
+            if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine) ||
+                 (isPunctuation(one_syntax) &&
+                  !(c == '.' && i > 0 && i + 1 < cleanedLine.size() &&
+                    isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))))
             {
                 if (!currentToken.empty())
                 {
@@ -832,10 +1004,6 @@ int main()
             {
                 cout << "<Keyword," << currentToken << ">" << endl;
             }
-            // else if (isexpocase(cleanedLine, i))
-            // {
-            //     cout << "Numeric: <" << currentToken << ">" << endl;
-            // }
             else if (isNumeric(currentToken) || ishexa(currentToken))
             {
                 cout << "Numeric: <" << currentToken << ">" << endl;

@@ -15,25 +15,32 @@ def main():
     print("Welcome to the Word Finder!")
 
     # value!
+
+    a,b = 5555, 10 
+
+    print(a + "\t" +b + "\t")
+
     
     text = input("Enter the string to search in: ")
     word = input("Enter the word you want to find: ")
     value = 88
-    min = -99 + value
+    min = -99
     value2 = 99.99
-    hexadecimal == 0x0FAD
+    hexadecimal = 0x0FAD
+
+    hexa2 = hexadecimal
 
     value3 = value2+value3
-    expo = 3.33e+10
+    expo = 3e+10
     result = find_word_in_string(text, word)
+
+    x,y,z = 11,11.5,"hello"
+    a,b = 5555, 10 , 2.5
+
+    print(a + "\t" +b + "\t" )
 
     #error handling cases rg3hom lma t3ml elerror handling bta3 elinvalid charachters
     # $hello
-
-    d   ps = value
-
-
-    
 
     print(value)
     print('the minimum value:\n' + min)
