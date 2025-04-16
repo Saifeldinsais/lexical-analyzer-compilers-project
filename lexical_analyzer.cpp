@@ -9,6 +9,8 @@
 
 using namespace std;
 
+string detector;
+
 // Python keywords
 vector<string> python_keywords = {
     "False", "None", "True", "and", "as", "assert", "async", "await",
@@ -190,72 +192,138 @@ bool isFunction(const string &word)
 
 void detectDataType(const string &identifier, const string &value)
 {
+
     string cleanedVal = value;
+
     cleanedVal.erase(remove_if(cleanedVal.begin(), cleanedVal.end(), ::isspace), cleanedVal.end());
 
     string type = "unknown";
     regex functionCallPattern(R"(^[a-zA-Z_][a-zA-Z0-9_]*\(.*\)$)");
     regex hexPattern(R"(0[xX][0-9a-fA-F]+)");
     regex numericPattern(R"(^-?\d+(\.\d+)?([eE][+-]?\d+)?$)");
+    regex arithmeticExprPattern(R"(^[\s\w\.\+\-\*/\(\)]+$)");
 
     for (const auto &id : identifiers_list)
         if (id.name == identifier)
             return;
 
-    if (isFunction(identifier)) {
+    if (isFunction(identifier))
+    {
         type = "function";
     }
-    else if (cleanedVal == "\"__main__\"" || cleanedVal == "'__main__'" || cleanedVal == "__main__") {
-        type = "string";
-    }
-    else if (regex_match(cleanedVal, functionCallPattern)) {
+    else if (regex_match(cleanedVal, functionCallPattern))
+    {
         string fname = cleanedVal.substr(0, cleanedVal.find('('));
-        if (isFunction(fname)) {
+        if (isFunction(fname))
+        {
             type = "function_call";
         }
     }
-    else if (regex_match(cleanedVal, hexPattern)) {
+    else if (regex_match(cleanedVal, hexPattern))
+    {
         type = "int";
     }
-    else if (!cleanedVal.empty() && cleanedVal.front() == '[') {
+    else if (!cleanedVal.empty() && cleanedVal.front() == '[')
+    {
         type = "list";
     }
-    else if (!cleanedVal.empty() && cleanedVal.front() == '{') {
-        type = (cleanedVal.find(':') != string::npos ? "dict" : "set");
+    else if (!cleanedVal.empty() && cleanedVal.front() == '{')
+    {
+        bool isDict = false;
+        bool inString = false;
+        char quoteChar = 0;
+
+        for (size_t i = 1; i < cleanedVal.size(); i++)
+        {
+            char ch = cleanedVal[i];
+
+            if ((ch == '"' || ch == '\'') && (i == 1 || cleanedVal[i - 1] != '\\'))
+            {
+                if (inString && ch == quoteChar)
+                    inString = false;
+                else if (!inString)
+                    inString = true, quoteChar = ch;
+            }
+
+            if (!inString && ch == ':')
+            {
+                isDict = true;
+                break;
+            }
+        }
+        type = isDict ? "dict" : "set";
     }
-    else if (!cleanedVal.empty() && cleanedVal.front() == '(' && cleanedVal.back() == ')') {
-        type = "tuple";
+    else if (cleanedVal.find('(') != string::npos && cleanedVal.find(')') != string::npos)
+    {
+        string inside = cleanedVal.substr(cleanedVal.find('('), cleanedVal.rfind(')') - cleanedVal.find('(') + 1);
+
+        // Check for tuple by comma inside the parentheses
+        if (inside.find(',') != string::npos)
+        {
+            type = "tuple";
+        }
+        else
+        {
+            // Refined detection: check for dot/expo/div inside or immediately outside the expression
+            bool hasFloat = inside.find('.') != string::npos;
+            bool hasExpo = inside.find('e') != string::npos || inside.find('E') != string::npos;
+
+            // Check if the expression is followed by division (e.g., (2 + 8) / 4)
+            size_t closingParen = cleanedVal.rfind(')');
+            bool followedByDiv = (closingParen != string::npos &&
+                                  closingParen + 1 < cleanedVal.size() &&
+                                  cleanedVal[closingParen + 1] == '/');
+
+            type = (hasFloat || hasExpo || followedByDiv) ? "float" : "int";
+        }
     }
-    else if (!cleanedVal.empty() && (cleanedVal.front() == '"' || cleanedVal.front() == '\'')) {
+    else if (!cleanedVal.empty() && (cleanedVal.front() == '"' || cleanedVal.front() == '\''))
+    {
         type = "string";
     }
-    else if (cleanedVal == "True" || cleanedVal == "False") {
+    else if (cleanedVal == "True" || cleanedVal == "False")
+    {
         type = "bool";
     }
-    else if (regex_match(cleanedVal, numericPattern)) {
+    else if (regex_match(cleanedVal, numericPattern))
+    {
         type = (cleanedVal.find('.') != string::npos || cleanedVal.find('e') != string::npos || cleanedVal.find('E') != string::npos) ? "float" : "int";
     }
-    else {
+    else
+    {
         // expression handling
         bool hasFloat = false, hasInt = false;
 
         string token;
-        for (size_t i = 0; i <= cleanedVal.size(); ++i) {
-            if (i < cleanedVal.size() && (isalnum(cleanedVal[i]) || cleanedVal[i] == '_' || cleanedVal[i] == '.' || cleanedVal[i] == '-')) {
+        for (size_t i = 0; i <= cleanedVal.size(); ++i)
+        {
+            if (i < cleanedVal.size() && (isalnum(cleanedVal[i]) || cleanedVal[i] == '_' || cleanedVal[i] == '.' || cleanedVal[i] == '-'))
+            {
                 token += cleanedVal[i];
-            } else {
-                if (!token.empty()) {
-                    if (regex_match(token, numericPattern)) {
+            }
+            else
+            {
+                if (!token.empty())
+                {
+                    if (regex_match(token, numericPattern))
+                    {
                         if (token.find('.') != string::npos || token.find('e') != string::npos || token.find('E') != string::npos)
                             hasFloat = true;
                         else
                             hasInt = true;
-                    } else {
-                        for (const auto &id : identifiers_list) {
-                            if (id.name == token) {
-                                if (id.type == "float") hasFloat = true;
-                                else if (id.type == "int") hasInt = true;
-                                else if (type == "unknown") type = id.type;
+                    }
+                    else
+                    {
+                        for (const auto &id : identifiers_list)
+                        {
+                            if (id.name == token)
+                            {
+                                if (id.type == "float")
+                                    hasFloat = true;
+                                else if (id.type == "int")
+                                    hasInt = true;
+                                else if (type == "unknown")
+                                    type = id.type;
                                 break;
                             }
                         }
@@ -265,15 +333,14 @@ void detectDataType(const string &identifier, const string &value)
             }
         }
 
-        if (hasFloat) type = "float";
-        else if (hasInt && type == "unknown") type = "int";
+        if (hasFloat)
+            type = "float";
+        else if (hasInt && type == "unknown")
+            type = "int";
     }
 
     identifiers_list.push_back({identifier, type});
 }
-
-
-
 
 ///////////////////////////////////////////////////////////////////
 string removecomments(string line)
@@ -717,6 +784,9 @@ bool handleErrors(const vector<string> &lines)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 int main()
 {
     string file;
@@ -735,31 +805,48 @@ int main()
     {
         string cleanedLine = removecomments(line);
 
-        if (line.find(',') != string::npos && line.find('=') != string::npos)
+        if (line.find('=') != string::npos)
         {
             size_t eq = line.find('=');
             string left = line.substr(0, eq);
             string right = line.substr(eq + 1);
 
-            auto splitAndClean = [](const string &str, char delim)
+            bool leftHasComma = left.find(',') != string::npos;
+            bool rightIsCollection =
+                !right.empty() &&
+                (right.front() == '[' || right.front() == '{' || right.front() == '(');
+
+            if (leftHasComma && !rightIsCollection)
             {
-                vector<string> tokens;
-                stringstream stringg(str);
-                string token;
-                while (getline(stringg, token, delim))
+                // Handle a, b = 1, 2
+                auto splitAndClean = [](const string &str, char delim)
                 {
-                    token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
-                    tokens.push_back(token);
+                    vector<string> tokens;
+                    stringstream stringg(str);
+                    string token;
+                    while (getline(stringg, token, delim))
+                    {
+                        token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
+                        tokens.push_back(token);
+                    }
+                    return tokens;
+                };
+
+                vector<string> vars = splitAndClean(left, ',');
+                vector<string> values = splitAndClean(right, ',');
+
+                for (size_t i = 0; i < vars.size() && i < values.size(); ++i)
+                {
+                    detectDataType(vars[i], values[i]);
                 }
-                return tokens;
-            };
-
-            vector<string> vars = splitAndClean(left, ',');
-            vector<string> values = splitAndClean(right, ',');
-
-            for (size_t i = 0; i < vars.size() && i < values.size(); ++i)
+            }
+            else
             {
-                detectDataType(vars[i], values[i]);
+                // Normal single assignment
+                string var = left;
+                var.erase(remove_if(var.begin(), var.end(), ::isspace), var.end());
+                string value = right;
+                detectDataType(var, value);
             }
         }
 
@@ -825,8 +912,14 @@ int main()
                                 functions_list.push_back(currentToken);
                             }
                             size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
+                                               ? cleanedLine.substr(equalPos + 1)
+                                               : "";
+
+
+                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
                             detectDataType(currentToken, value);
+
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
                         else
@@ -876,8 +969,14 @@ int main()
                                 functions_list.push_back(currentToken);
                             }
                             size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
+                                               ? cleanedLine.substr(equalPos + 1)
+                                               : "";
+
+                            
+                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
                             detectDataType(currentToken, value);
+
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
                         else
@@ -924,13 +1023,18 @@ int main()
                     {
                         if (availableIdentifiers(currentToken) == -1)
                         {
-                            bool isFunc = cleanedLine.find("def " + currentToken + "(") != string::npos;
+                            bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
                             if (isFunc)
                             {
                                 functions_list.push_back(currentToken);
                             }
                             size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos && equalPos > i) ? cleanedLine.substr(equalPos + 1) : "";
+                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
+                                               ? cleanedLine.substr(equalPos + 1)
+                                               : "";
+
+
+                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
                             detectDataType(currentToken, value);
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
@@ -979,8 +1083,13 @@ int main()
                                 functions_list.push_back(currentToken);
                             }
                             size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
+                                               ? cleanedLine.substr(equalPos + 1)
+                                               : "";
+
+                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
                             detectDataType(currentToken, value);
+
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                         }
                         else
@@ -1018,7 +1127,12 @@ int main()
                         functions_list.push_back(currentToken);
                     }
                     size_t equalPos = cleanedLine.find('=');
-                    string value = (equalPos != string::npos) ? cleanedLine.substr(equalPos + 1) : "";
+                    string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
+                                       ? cleanedLine.substr(equalPos + 1)
+                                       : "";
+
+
+                    value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
                     detectDataType(currentToken, value);
                     cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
                 }
@@ -1037,5 +1151,7 @@ int main()
     }
 
     print_symbolsTable();
+
+    cout << detector;
     return 0;
 }

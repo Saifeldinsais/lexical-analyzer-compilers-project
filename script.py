@@ -14,7 +14,11 @@ class MyClass:
         print(f"Hello, {self.name}!")
         x = 10
 
-def myFunction(x, y=10):
+
+def returnFunctionCall():
+    print("ay 7aga")
+
+def myFunction( x, y=10):
     """
     A function docstring
     """
@@ -28,17 +32,21 @@ def myFunction(x, y=10):
     mySet = {4, 5, 6}
     myDict = {7: "seven", 8: "eight", 9: "nine"}
     myTuple = (0, 1, 2)
-    myTuple2 = (12+14)/2 # not handled as a tuple
-    ay7aga=mySet
-    vVv = 0xABC
-    VVVVVVV = vVv
-    names = ["hey", "hello", "hi"]
+    int_brackets = (12-6)
+    float_brackets = (12+14)/2 # not handled as a tuple
+    ay7agaSet=mySet
+    vVvHexa = 0xABC
+    VVVVVVVHexa = vVvHexa
+    namesList = ["hey", "hello", "hi"]
     newSet = {":", ":(", ":D"} # should be a set not a dictionary
     # do something
-    total = x + y
-    if total > 100:
+    MyClass.greet(vVvHexa, vVvHexa)
+    totalInt = x + y
+    returnFunctionCall()
+    if totalInt > 100:
         return True
-    elif total < 100:
+    elif totalInt < 100:
         return False
     else:
-        return "Result is {}".format(total)
+        return "Result is {}".format(totalInt)
+    

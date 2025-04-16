@@ -35,7 +35,8 @@ def main():
     result = find_word_in_string(text, word)
 
     x,y,z = 11,11.5,"hello"
-    a,b = 5555, 10 , 2.5
+
+    c = (a+b)
 
     print(a + "\t" +b + "\t" )
 
