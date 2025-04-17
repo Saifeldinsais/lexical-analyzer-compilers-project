@@ -60,10 +60,10 @@ vector<string> functions_list;
 
 void print_symbolsTable()
 {
-    cout << "---------------------------------------------" << endl;
+    cout << "---------------------------------------------------------------------------------------------------------" << endl;
     cout << "table of this file" << endl;
-    cout << "---------------------------------------------" << endl;
-    cout << "|\t" << "index\t|\tidentifier\t\t|" << endl;
+    cout << "---------------------------------------------------------------------------------------------------------" << endl;
+    cout << "|\t" << "index\t|\tidentifier\t|\t Data Type \t\t|\t\t scope \t|" << endl;
     for (int i = 0; i < identifiers_list.size(); i++)
     {
         cout << "|\t" << i << "\t|\t" << identifiers_list[i].name << "\t\t|\t" << identifiers_list[i].type << "\t\t|" << identifiers_list[i].scope << "\t|" << endl;
