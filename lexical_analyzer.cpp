@@ -1,3 +1,4 @@
+#include <stack>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -195,8 +196,6 @@ void detectDataType(const string &identifier, const string &value)
     string cleanedVal = value;
 
     cleanedVal.erase(remove_if(cleanedVal.begin(), cleanedVal.end(), ::isspace), cleanedVal.end());
-    cout << cleanedVal << endl;
-    cout << "---------------" << endl;
     string type = "unknown";
     regex functionCallPattern(R"(^[a-zA-Z_][a-zA-Z0-9_]*\(.*\)$)");
     regex hexPattern(R"(0[xX][0-9a-fA-F]+)");
@@ -338,10 +337,6 @@ void detectDataType(const string &identifier, const string &value)
             type = "int";
     }
 
-    cout << "_____________________________" << endl;
-    cout << "identifier added: " << identifier << "type: " << type << endl;
-    cout << "_____________________________" << endl;
-
     identifiers_list.push_back({identifier, type});
 }
 
@@ -466,6 +461,38 @@ vector<string> getLiterals(string line)
     }
 
     return literals;
+}
+
+void handleIndentation(const string &line, stack<int> &indentStack)
+{
+    int spaces = 0;
+    for (char c : line)
+    {
+        if (c == ' ')
+            spaces++;
+        else
+            break;
+    }
+
+    // Ignore blank lines
+    if (line.find_first_not_of(" \t\r\n") == string::npos)
+        return;
+
+    int currentIndent = indentStack.top();
+
+    if (spaces > currentIndent)
+    {
+        indentStack.push(spaces);
+        cout << "<INDENT>" << endl;
+    }
+    else if (spaces < currentIndent)
+    {
+        while (!indentStack.empty() && spaces < indentStack.top())
+        {
+            indentStack.pop();
+            cout << "<DEDENT>" << endl;
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -798,12 +825,60 @@ bool check_unclosedBrackets(const vector<string> &lines)
     return errorFound;
 }
 
+bool check_indentationMismatch(const vector<string> &lines)
+{
+    stack<int> indentStack;
+    indentStack.push(0);
+
+    for (int i = 0; i < lines.size(); ++i)
+    {
+        const string &line = lines[i];
+        int spaces = 0;
+
+        // Count leading spaces
+        for (char c : line)
+        {
+            if (c == ' ')
+                spaces++;
+            else
+                break;
+        }
+
+        // Skip empty or pure comment lines
+        if (line.find_first_not_of(" \t\r\n") == string::npos)
+            continue;
+
+        int currentIndent = indentStack.top();
+
+        if (spaces > currentIndent)
+        {
+            indentStack.push(spaces);
+        }
+        else if (spaces < currentIndent)
+        {
+            while (!indentStack.empty() && spaces < indentStack.top())
+            {
+                indentStack.pop();
+            }
+
+            // If after popping it still doesn't match, it's a mismatch
+            if (!indentStack.empty() && spaces != indentStack.top())
+            {
+                cout << "Indentation mismatch at line " << (i + 1) << ": " << line << endl;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 ///////////////////////////////////////////////////////////
 
 bool handleErrors(const vector<string> &lines)
 {
     bool errorFound = false;
-    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines) || check_invalidnumber(lines) || check_invalid_operators(lines) || check_invalidIdentifiers(lines) || check_unclosedBrackets(lines) || check_missingColons(lines));
+    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines) || check_invalidnumber(lines) || check_invalid_operators(lines) || check_invalidIdentifiers(lines) || check_unclosedBrackets(lines) || check_missingColons(lines) || check_indentationMismatch(lines));
     return errorFound;
 }
 
@@ -815,6 +890,7 @@ bool handleErrors(const vector<string> &lines)
 
 int main()
 {
+
     string file;
     cout << "Enter the Python file name: ";
     cin >> file;
@@ -827,8 +903,12 @@ int main()
         return 0;
     }
 
+    stack<int> indentStack;
+    indentStack.push(0);
+
     for (string line : cleanedFileLines)
     {
+        handleIndentation(line, indentStack);
         string cleanedLine = removecomments(line);
 
         if (line.find('=') != string::npos && line.find("def ") == string::npos)
@@ -1195,11 +1275,6 @@ int main()
                                 value = value.substr(0, commaPos);
 
                             // Pass to type detector
-
-                            cout << "_____________________________________" << endl;
-                            cout << "Elvalue ely d5la 3la eldetect: " << value << endl;
-                            cout << "_____________________________________" << endl;
-
                             detectDataType(currentToken, value);
 
                             cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;

@@ -13,6 +13,7 @@ class MyClass:
         # Greet method
         print(f"Hello, {self.name}!")
         x = 10
+        kk = 4
 
 
 def returnFunctionCall():
