@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include <stack>
 #include <iostream>
 #include <fstream>
@@ -6,10 +7,11 @@
 #include <cctype>
 #include <regex>
 #include <sstream>
+#include <iomanip>
 
 using namespace std;
 
-string detector;
+unordered_map<string, int> functionIndentLevels;
 
 // Python keywords
 vector<string> python_keywords = {
@@ -52,6 +54,7 @@ struct Identifier
     string name;
     string type;
     string scope;
+    string value;
 };
 
 vector<Identifier> identifiers_list;
@@ -60,15 +63,27 @@ vector<string> functions_list;
 
 void print_symbolsTable()
 {
-    cout << "---------------------------------------------------------------------------------------------------------" << endl;
-    cout << "table of this file" << endl;
-    cout << "---------------------------------------------------------------------------------------------------------" << endl;
-    cout << "|\t" << "index\t|\tidentifier\t|\t Data Type \t\t|\t\t scope \t|" << endl;
-    for (int i = 0; i < identifiers_list.size(); i++)
+    cout << "\nSymbol Table:\n";
+    cout << "--------------------------------------------------------------------------------------------------------" << endl;
+    cout << setw(6) << "Index"
+         << setw(15) << "Identifier"
+         << setw(10) << "Type"
+         << setw(20) << "Scope"
+         << setw(25) << "Value" << endl;
+    cout << "--------------------------------------------------------------------------------------------------------" << endl;
+
+    for (size_t i = 0; i < identifiers_list.size(); ++i)
     {
-        cout << "|\t" << i << "\t|\t" << identifiers_list[i].name << "\t\t|\t" << identifiers_list[i].type << "\t\t|" << identifiers_list[i].scope << "\t|" << endl;
+        const auto &id = identifiers_list[i];
+        cout << setw(6) << i
+             << setw(15) << id.name
+             << setw(10) << id.type
+             << setw(20) << id.scope
+             << setw(25) << (id.value.empty() ? "-" : id.value) << endl;
     }
+    cout << "--------------------------------------------------------------------------------------------------------" << endl;
 };
+
 ///////////////////////////////////////////////////////////////////
 bool isKeyword(const string &word)
 {
@@ -338,7 +353,7 @@ void detectDataType(const string &identifier, const string &value, const string 
             type = "int";
     }
 
-    identifiers_list.push_back({identifier, type, scope});
+    identifiers_list.push_back({identifier, type, scope, cleanedVal});
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -492,10 +507,27 @@ void handleIndentation(const string &line, stack<int> &indentStack, stack<string
         {
             indentStack.pop();
             cout << "<DEDENT>" << endl;
-            if (!scopeStack.empty() && scopeStack.top() != "global")
+
+            // Do not pop function scope unless dedent below function indent level
+            if (scopeStack.size() > 1)
             {
-                scopeStack.pop();
-                currentScope = scopeStack.top(); // update the current scope
+                string topScope = scopeStack.top();
+
+                if (functionIndentLevels.count(topScope))
+                {
+                    int functionLevel = functionIndentLevels[topScope];
+                    if (spaces <= functionLevel)
+                    {
+                        scopeStack.pop();
+                        currentScope = scopeStack.top();
+                        functionIndentLevels.erase(topScope);
+                    }
+                }
+                else
+                {
+                    scopeStack.pop();
+                    currentScope = scopeStack.top();
+                }
             }
         }
     }
@@ -833,6 +865,7 @@ bool check_unclosedBrackets(const vector<string> &lines)
 
 bool check_indentationMismatch(const vector<string> &lines)
 {
+    bool errorfound = false;
     stack<int> indentStack;
     indentStack.push(0);
 
@@ -840,6 +873,10 @@ bool check_indentationMismatch(const vector<string> &lines)
     {
         const string &line = lines[i];
         int spaces = 0;
+        if (isCommentLine(line))
+        {
+            continue;
+        }
 
         // Count leading spaces
         for (char c : line)
@@ -849,10 +886,6 @@ bool check_indentationMismatch(const vector<string> &lines)
             else
                 break;
         }
-
-        // Skip empty or pure comment lines
-        if (line.find_first_not_of(" \t\r\n") == string::npos)
-            continue;
 
         int currentIndent = indentStack.top();
 
@@ -871,12 +904,12 @@ bool check_indentationMismatch(const vector<string> &lines)
             if (!indentStack.empty() && spaces != indentStack.top())
             {
                 cout << "Indentation mismatch at line " << (i + 1) << ": " << line << endl;
-                return true;
+                errorfound = true;
             }
         }
     }
 
-    return false;
+    return errorfound;
 }
 
 ///////////////////////////////////////////////////////////
@@ -896,7 +929,6 @@ bool handleErrors(const vector<string> &lines)
 
 int main()
 {
-
     string file;
     cout << "Enter the Python file name: ";
     cin >> file;
@@ -918,16 +950,91 @@ int main()
 
     for (string line : cleanedFileLines)
     {
-        handleIndentation(line, indentStack, scopeStack, currentScope);
         string cleanedLine = removecomments(line);
 
-        if (line.find('=') != string::npos && line.find("def ") == string::npos)
+        bool isFunctionDef = cleanedLine.find("def ") != string::npos;
+        if (isFunctionDef)
         {
-            size_t eq = line.find('=');
-            string left = line.substr(0, eq);
-            string right = line.substr(eq + 1);
+            size_t defPos = cleanedLine.find("def ") + 4;
+            size_t startParams = cleanedLine.find('(', defPos);
+            size_t endParams = cleanedLine.find(')', startParams);
 
-            // Check if it's a multi-variable assignment like a, b = 1, 2
+            if (startParams != string::npos && endParams != string::npos && endParams > startParams)
+            {
+                string funcName = cleanedLine.substr(defPos, startParams - defPos);
+                string paramSection = cleanedLine.substr(startParams + 1, endParams - startParams - 1);
+
+                // Add function name as identifier to global scope
+                if (availableIdentifiers(funcName, "global") == -1) {
+                    identifiers_list.push_back({funcName, "function", "global", ""});
+                    functions_list.push_back(funcName);
+                }
+                
+                currentScope = funcName;
+                scopeStack.push(funcName);
+
+                int spaces = 0;
+                for (char c : line)
+                    if (c == ' ')
+                        spaces++;
+                    else
+                        break;
+
+                functionIndentLevels[funcName] = spaces;
+
+                auto splitAndClean = [](const string &str, char delim)
+                {
+                    vector<string> tokens;
+                    stringstream ss(str);
+                    string token;
+                    while (getline(ss, token, delim))
+                    {
+                        token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
+                        tokens.push_back(token);
+                    }
+                    return tokens;
+                };
+
+                vector<string> params = splitAndClean(paramSection, ',');
+
+                for (const string &param : params)
+                {
+                    size_t eq = param.find('=');
+                    if (eq != string::npos)
+                    {
+                        string var = param.substr(0, eq);
+                        string val = param.substr(eq + 1);
+
+                        // Fix for trailing colon in default values like `10):`
+                        if (!val.empty() && val.back() == ':')
+                            val.pop_back();
+
+                        if (availableIdentifiers(var, currentScope) == -1)
+                            detectDataType(var, val, currentScope);
+                    }
+                    else
+                    {
+                        if (availableIdentifiers(param, currentScope) == -1)
+                        {
+                            identifiers_list.push_back({param, "unknown", currentScope});
+                        }
+                    }
+                }
+                continue;
+            }
+        }
+
+        handleIndentation(line, indentStack, scopeStack, currentScope);
+
+        if (isCommentLine2(line))
+            continue;
+        // Handle assignments first
+        if (cleanedLine.find('=') != string::npos && cleanedLine.find("def ") == string::npos)
+        {
+            size_t eq = cleanedLine.find('=');
+            string left = cleanedLine.substr(0, eq);
+            string right = cleanedLine.substr(eq + 1);
+
             bool leftHasComma = left.find(',') != string::npos;
             bool rightHasComma = right.find(',') != string::npos;
 
@@ -954,60 +1061,13 @@ int main()
                     detectDataType(vars[i], values[i], currentScope);
                 }
             }
-        }
-
-        // Handle function parameter default values
-        if (line.find("def ") != string::npos)
-        {
-            size_t defPos = line.find("def ") + 4;
-            size_t startParams = line.find('(', defPos);
-            size_t endParams = line.find(')', startParams);
-
-            if (startParams != string::npos && endParams != string::npos && endParams > startParams)
+            else
             {
-                string funcName = line.substr(defPos, startParams - defPos);
-                string paramSection = line.substr(startParams + 1, endParams - startParams - 1);
-
-                detectDataType(funcName, "", "global");
-
-                currentScope = funcName;
-                scopeStack.push(funcName);
-
-                auto splitAndClean = [](const string &str, char delim)
-                {
-                    vector<string> tokens;
-                    stringstream ss(str);
-                    string token;
-                    while (getline(ss, token, delim))
-                    {
-                        token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
-                        tokens.push_back(token);
-                    }
-                    return tokens;
-                };
-
-                vector<string> params = splitAndClean(paramSection, ',');
-
-                for (const string &param : params)
-                {
-                    size_t eq = param.find('=');
-                    if (eq != string::npos)
-                    {
-                        string var = param.substr(0, eq);
-                        string val = param.substr(eq + 1);
-                        detectDataType(var, val, currentScope);
-                    }
-                    else
-                    {
-                        // Parameter without a default value -> assign type as unknown
-                        if (availableIdentifiers(param, currentScope) == -1)
-                        {
-                            identifiers_list.push_back({param, "unknown", currentScope});
-                        }
-                    }
-                }
-
-                continue;
+                string var = left;
+                var.erase(remove_if(var.begin(), var.end(), ::isspace), var.end());
+                string val = right;
+                val.erase(remove_if(val.begin(), val.end(), ::isspace), val.end());
+                detectDataType(var, val, currentScope);
             }
         }
 
@@ -1045,7 +1105,6 @@ int main()
             string two_syntax = (i + 1 < cleanedLine.size()) ? cleanedLine.substr(i, 2) : "";
             string three_syntax = (i + 2 < cleanedLine.size()) ? cleanedLine.substr(i, 3) : "";
 
-            // Check for multi-character operators or punctuation (e.g., "and", "==", "...")
             if ((three_syntax.size() == 3 && isOperator(three_syntax) && isIsolated(i, 3, cleanedLine)) ||
                 (three_syntax.size() == 3 && isPunctuation(three_syntax)))
             {
@@ -1071,27 +1130,19 @@ int main()
                             !isPunctuation(currentToken) &&
                             !currentToken.empty() &&
                             currentToken.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == string::npos)
-
                         {
                             bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
                             if (isFunc)
                             {
                                 functions_list.push_back(currentToken);
                             }
-                            size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
-                                               ? cleanedLine.substr(equalPos + 1)
+                            size_t equalPos = line.find('=');
+                            string value = (equalPos != string::npos && equalPos < line.size() - 1)
+                                               ? line.substr(equalPos + 1)
                                                : "";
-
-                            // Remove all spaces
-                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
-
-                            // Keep only the part before the first comma, if any
                             size_t commaPos = value.find(',');
                             if (commaPos != string::npos)
                                 value = value.substr(0, commaPos);
-
-                            // Pass to type detector
                             detectDataType(currentToken, value, currentScope);
 
                             cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
@@ -1141,27 +1192,19 @@ int main()
                             !isPunctuation(currentToken) &&
                             !currentToken.empty() &&
                             currentToken.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == string::npos)
-
                         {
                             bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
                             if (isFunc)
                             {
                                 functions_list.push_back(currentToken);
                             }
-                            size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
-                                               ? cleanedLine.substr(equalPos + 1)
+                            size_t equalPos = line.find('=');
+                            string value = (equalPos != string::npos && equalPos < line.size() - 1)
+                                               ? line.substr(equalPos + 1)
                                                : "";
-
-                            // Remove all spaces
-                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
-
-                            // Keep only the part before the first comma, if any
                             size_t commaPos = value.find(',');
                             if (commaPos != string::npos)
                                 value = value.substr(0, commaPos);
-
-                            // Pass to type detector
                             detectDataType(currentToken, value, currentScope);
 
                             cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
@@ -1186,7 +1229,6 @@ int main()
                 continue;
             }
 
-            // Handle single-character operators or punctuation
             if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine) ||
                  (isPunctuation(one_syntax) &&
                   !(c == '.' && i > 0 && i + 1 < cleanedLine.size() &&
@@ -1214,27 +1256,19 @@ int main()
                             !isPunctuation(currentToken) &&
                             !currentToken.empty() &&
                             currentToken.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == string::npos)
-
                         {
                             bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
                             if (isFunc)
                             {
                                 functions_list.push_back(currentToken);
                             }
-                            size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
-                                               ? cleanedLine.substr(equalPos + 1)
+                            size_t equalPos = line.find('=');
+                            string value = (equalPos != string::npos && equalPos < line.size() - 1)
+                                               ? line.substr(equalPos + 1)
                                                : "";
-
-                            // Remove all spaces
-                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
-
-                            // Keep only the part before the first comma, if any
                             size_t commaPos = value.find(',');
                             if (commaPos != string::npos)
                                 value = value.substr(0, commaPos);
-
-                            // Pass to type detector
                             detectDataType(currentToken, value, currentScope);
 
                             cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
@@ -1282,21 +1316,16 @@ int main()
                             !isPunctuation(currentToken) &&
                             !currentToken.empty() &&
                             currentToken.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == string::npos)
-
                         {
-
                             bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
                             if (isFunc)
                             {
                                 functions_list.push_back(currentToken);
                             }
-                            size_t equalPos = cleanedLine.find('=');
-                            string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
-                                               ? cleanedLine.substr(equalPos + 1)
+                            size_t equalPos = line.find('=');
+                            string value = (equalPos != string::npos && equalPos < line.size() - 1)
+                                               ? line.substr(equalPos + 1)
                                                : "";
-
-                            // Remove all spaces
-                            value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
                             detectDataType(currentToken, value, currentScope);
 
                             cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
@@ -1311,11 +1340,10 @@ int main()
             }
             else
             {
-                currentToken += c; // Collect all characters, including number-related ones
+                currentToken += c;
             }
         }
 
-        // Handle any remaining token at the end of the line
         if (!currentToken.empty())
         {
             if (isKeyword(currentToken))
@@ -1334,27 +1362,19 @@ int main()
                     !isPunctuation(currentToken) &&
                     !currentToken.empty() &&
                     currentToken.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == string::npos)
-
                 {
                     bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
                     if (isFunc)
                     {
                         functions_list.push_back(currentToken);
                     }
-                    size_t equalPos = cleanedLine.find('=');
-                    string value = (equalPos != string::npos && equalPos < cleanedLine.size() - 1)
-                                       ? cleanedLine.substr(equalPos + 1)
+                    size_t equalPos = line.find('=');
+                    string value = (equalPos != string::npos && equalPos < line.size() - 1)
+                                       ? line.substr(equalPos + 1)
                                        : "";
-
-                    // Remove all spaces
-                    value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
-
-                    // Keep only the part before the first comma, if any
                     size_t commaPos = value.find(',');
                     if (commaPos != string::npos)
                         value = value.substr(0, commaPos);
-
-                    // Pass to type detector
                     detectDataType(currentToken, value, currentScope);
 
                     cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
@@ -1375,6 +1395,5 @@ int main()
 
     print_symbolsTable();
 
-    cout << detector;
     return 0;
 }
