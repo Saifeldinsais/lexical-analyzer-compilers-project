@@ -51,6 +51,7 @@ struct Identifier
 {
     string name;
     string type;
+    string scope;
 };
 
 vector<Identifier> identifiers_list;
@@ -65,7 +66,7 @@ void print_symbolsTable()
     cout << "|\t" << "index\t|\tidentifier\t\t|" << endl;
     for (int i = 0; i < identifiers_list.size(); i++)
     {
-        cout << "|\t" << i << "\t|\t" << identifiers_list[i].name << "\t\t|\t" << identifiers_list[i].type << "\t|" << endl;
+        cout << "|\t" << i << "\t|\t" << identifiers_list[i].name << "\t\t|\t" << identifiers_list[i].type << "\t\t|" << identifiers_list[i].scope << "\t|" << endl;
     }
 };
 ///////////////////////////////////////////////////////////////////
@@ -163,11 +164,11 @@ bool ishexa(const string &word)
 }
 
 ///////////////////////////////////////////////////////////////////
-int availableIdentifiers(const string &word)
+int availableIdentifiers(const string &word, const string &scope)
 {
     for (int i = 0; i < identifiers_list.size(); i++)
     {
-        if (word == identifiers_list[i].name)
+        if (word == identifiers_list[i].name && identifiers_list[i].scope == scope)
         {
             return i;
         }
@@ -190,7 +191,7 @@ bool isFunction(const string &word)
 
 ////////////////////////////////////////////////
 
-void detectDataType(const string &identifier, const string &value)
+void detectDataType(const string &identifier, const string &value, const string &scope)
 {
 
     string cleanedVal = value;
@@ -202,7 +203,7 @@ void detectDataType(const string &identifier, const string &value)
     regex numericPattern(R"(^-?\d+(\.\d+)?([eE][+-]?\d+)?$)");
 
     for (const auto &id : identifiers_list)
-        if (id.name == identifier)
+        if (id.name == identifier && id.scope == scope)
             return;
 
     if (isFunction(identifier))
@@ -337,7 +338,7 @@ void detectDataType(const string &identifier, const string &value)
             type = "int";
     }
 
-    identifiers_list.push_back({identifier, type});
+    identifiers_list.push_back({identifier, type, scope});
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -463,7 +464,7 @@ vector<string> getLiterals(string line)
     return literals;
 }
 
-void handleIndentation(const string &line, stack<int> &indentStack)
+void handleIndentation(const string &line, stack<int> &indentStack, stack<string> &scopeStack, string &currentScope)
 {
     int spaces = 0;
     for (char c : line)
@@ -491,6 +492,11 @@ void handleIndentation(const string &line, stack<int> &indentStack)
         {
             indentStack.pop();
             cout << "<DEDENT>" << endl;
+            if (!scopeStack.empty() && scopeStack.top() != "global")
+            {
+                scopeStack.pop();
+                currentScope = scopeStack.top(); // update the current scope
+            }
         }
     }
 }
@@ -906,9 +912,13 @@ int main()
     stack<int> indentStack;
     indentStack.push(0);
 
+    string currentScope = "global";
+    stack<string> scopeStack;
+    scopeStack.push("global");
+
     for (string line : cleanedFileLines)
     {
-        handleIndentation(line, indentStack);
+        handleIndentation(line, indentStack, scopeStack, currentScope);
         string cleanedLine = removecomments(line);
 
         if (line.find('=') != string::npos && line.find("def ") == string::npos)
@@ -941,7 +951,7 @@ int main()
 
                 for (size_t i = 0; i < vars.size() && i < values.size(); ++i)
                 {
-                    detectDataType(vars[i], values[i]);
+                    detectDataType(vars[i], values[i], currentScope);
                 }
             }
         }
@@ -949,11 +959,19 @@ int main()
         // Handle function parameter default values
         if (line.find("def ") != string::npos)
         {
-            size_t startParams = line.find('(');
-            size_t endParams = line.find(')');
+            size_t defPos = line.find("def ") + 4;
+            size_t startParams = line.find('(', defPos);
+            size_t endParams = line.find(')', startParams);
+
             if (startParams != string::npos && endParams != string::npos && endParams > startParams)
             {
+                string funcName = line.substr(defPos, startParams - defPos);
                 string paramSection = line.substr(startParams + 1, endParams - startParams - 1);
+
+                detectDataType(funcName, "", "global");
+
+                currentScope = funcName;
+                scopeStack.push(funcName);
 
                 auto splitAndClean = [](const string &str, char delim)
                 {
@@ -977,9 +995,19 @@ int main()
                     {
                         string var = param.substr(0, eq);
                         string val = param.substr(eq + 1);
-                        detectDataType(var, val);
+                        detectDataType(var, val, currentScope);
+                    }
+                    else
+                    {
+                        // Parameter without a default value -> assign type as unknown
+                        if (availableIdentifiers(param, currentScope) == -1)
+                        {
+                            identifiers_list.push_back({param, "unknown", currentScope});
+                        }
                     }
                 }
+
+                continue;
             }
         }
 
@@ -1037,7 +1065,7 @@ int main()
                     }
                     else
                     {
-                        if (availableIdentifiers(currentToken) == -1 &&
+                        if (availableIdentifiers(currentToken, currentScope) == -1 &&
                             !isKeyword(currentToken) &&
                             isalpha(currentToken[0]) &&
                             !isPunctuation(currentToken) &&
@@ -1064,13 +1092,13 @@ int main()
                                 value = value.substr(0, commaPos);
 
                             // Pass to type detector
-                            detectDataType(currentToken, value);
+                            detectDataType(currentToken, value, currentScope);
 
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                         else
                         {
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                     }
                     currentToken.clear();
@@ -1107,7 +1135,7 @@ int main()
                     }
                     else
                     {
-                        if (availableIdentifiers(currentToken) == -1 &&
+                        if (availableIdentifiers(currentToken, currentScope) == -1 &&
                             !isKeyword(currentToken) &&
                             isalpha(currentToken[0]) &&
                             !isPunctuation(currentToken) &&
@@ -1134,13 +1162,13 @@ int main()
                                 value = value.substr(0, commaPos);
 
                             // Pass to type detector
-                            detectDataType(currentToken, value);
+                            detectDataType(currentToken, value, currentScope);
 
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                         else
                         {
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                     }
                     currentToken.clear();
@@ -1180,7 +1208,7 @@ int main()
                     }
                     else
                     {
-                        if (availableIdentifiers(currentToken) == -1 &&
+                        if (availableIdentifiers(currentToken, currentScope) == -1 &&
                             !isKeyword(currentToken) &&
                             isalpha(currentToken[0]) &&
                             !isPunctuation(currentToken) &&
@@ -1207,13 +1235,13 @@ int main()
                                 value = value.substr(0, commaPos);
 
                             // Pass to type detector
-                            detectDataType(currentToken, value);
+                            detectDataType(currentToken, value, currentScope);
 
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                         else
                         {
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                     }
                     currentToken.clear();
@@ -1248,7 +1276,7 @@ int main()
                     }
                     else
                     {
-                        if (availableIdentifiers(currentToken) == -1 &&
+                        if (availableIdentifiers(currentToken, currentScope) == -1 &&
                             !isKeyword(currentToken) &&
                             isalpha(currentToken[0]) &&
                             !isPunctuation(currentToken) &&
@@ -1256,6 +1284,7 @@ int main()
                             currentToken.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_") == string::npos)
 
                         {
+
                             bool isFunc = cleanedLine.find("def " + currentToken) != string::npos;
                             if (isFunc)
                             {
@@ -1268,20 +1297,13 @@ int main()
 
                             // Remove all spaces
                             value.erase(remove_if(value.begin(), value.end(), ::isspace), value.end());
+                            detectDataType(currentToken, value, currentScope);
 
-                            // Keep only the part before the first comma, if any
-                            size_t commaPos = value.find(',');
-                            if (commaPos != string::npos)
-                                value = value.substr(0, commaPos);
-
-                            // Pass to type detector
-                            detectDataType(currentToken, value);
-
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                         else
                         {
-                            cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                            cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                         }
                     }
                     currentToken.clear();
@@ -1306,7 +1328,7 @@ int main()
             }
             else
             {
-                if (availableIdentifiers(currentToken) == -1 &&
+                if (availableIdentifiers(currentToken, currentScope) == -1 &&
                     !isKeyword(currentToken) &&
                     isalpha(currentToken[0]) &&
                     !isPunctuation(currentToken) &&
@@ -1333,13 +1355,13 @@ int main()
                         value = value.substr(0, commaPos);
 
                     // Pass to type detector
-                    detectDataType(currentToken, value);
+                    detectDataType(currentToken, value, currentScope);
 
-                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                    cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                 }
                 else
                 {
-                    cout << "identifier: <id," << availableIdentifiers(currentToken) << ">\t" << currentToken << endl;
+                    cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
                 }
             }
             currentToken.clear();

@@ -1,6 +1,7 @@
 def find_word_in_string(text, word):
     text = text.lower()
     word = word.lower()
+    x = 11.5
     return word in text
 
 

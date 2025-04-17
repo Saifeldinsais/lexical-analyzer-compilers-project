@@ -15,6 +15,8 @@ class MyClass:
         x = 10
         kk = 4
 
+    y= "ay 7aga"
+
 
 def returnFunctionCall():
     print("ay 7aga")
@@ -26,7 +28,7 @@ def myFunction( x, y=10):
     "hello world"
     x = 5
 
-
+    inttt,floaaattt,stringgg = 10, 11.5, "String"
     myList = [1, 2, 3]
     for i in myList:
         print(i)

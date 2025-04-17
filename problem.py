@@ -1,12 +1,4 @@
-def func1():
-    x = 10
+def myFunction( x, y=10):
+    x = 5
+    totalInt = x + y
 
-def func2():
-    x = 11
-
-
-
-y = 10
-print(y)
-y = "string"
-print(y)
