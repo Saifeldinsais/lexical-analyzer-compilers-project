@@ -964,12 +964,17 @@ int main()
                 string funcName = cleanedLine.substr(defPos, startParams - defPos);
                 string paramSection = cleanedLine.substr(startParams + 1, endParams - startParams - 1);
 
+                cout << "<Keyword,def>" << endl;
+                cout << "identifier: <id," << (availableIdentifiers(funcName, "global") == -1 ? identifiers_list.size() : availableIdentifiers(funcName, "global")) << ">\t" << funcName << endl;
+                cout << "Punctuation: <(>" << endl;
+
                 // Add function name as identifier to global scope
-                if (availableIdentifiers(funcName, "global") == -1) {
+                if (availableIdentifiers(funcName, "global") == -1)
+                {
                     identifiers_list.push_back({funcName, "function", "global", ""});
                     functions_list.push_back(funcName);
                 }
-                
+
                 currentScope = funcName;
                 scopeStack.push(funcName);
 
@@ -997,8 +1002,9 @@ int main()
 
                 vector<string> params = splitAndClean(paramSection, ',');
 
-                for (const string &param : params)
+                for (size_t i = 0; i < params.size(); ++i)
                 {
+                    const string &param = params[i];
                     size_t eq = param.find('=');
                     if (eq != string::npos)
                     {
@@ -1011,6 +1017,10 @@ int main()
 
                         if (availableIdentifiers(var, currentScope) == -1)
                             detectDataType(var, val, currentScope);
+
+                        cout << "identifier: <id," << availableIdentifiers(var, currentScope) << ">\t" << var << endl;
+                        cout << "Operator: <=>" << endl;
+                        cout << "Numeric: <" << val << ">" << endl;
                     }
                     else
                     {
@@ -1018,8 +1028,22 @@ int main()
                         {
                             identifiers_list.push_back({param, "unknown", currentScope});
                         }
+                        cout << "identifier: <id," << availableIdentifiers(param, currentScope) << ">\t" << param << endl;
                     }
+
+                    if (i < params.size() - 1)
+                        cout << "Punctuation: <,>" << endl;
                 }
+
+                cout << "Punctuation: <)>" << endl;
+
+                // Look for colon after ')'
+                size_t colonPos = cleanedLine.find(':', endParams);
+                if (colonPos != string::npos)
+                {
+                    cout << "Punctuation: <:>" << endl;
+                }
+
                 continue;
             }
         }
