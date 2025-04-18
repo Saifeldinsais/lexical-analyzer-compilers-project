@@ -19,14 +19,14 @@ vector<string> python_keywords = {
     "break", "class", "continue", "def", "del", "elif", "else", "except",
     "finally", "for", "from", "global", "if", "import", "in", "is", "lambda",
     "nonlocal", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield",
-    "match", "case", "f"};
+    "match", "case", "f" };
 
 vector<string> operators_list = {
     "+", "-", "", "/", "%", "*", "//",
     "=", "+=", "-=", "=", "/=", "%=", "//=", "*=", "&=", "|=", "^=", ">>=", "<<=",
     "==", "!=", ">", "<", ">=", "<=",
     "and", "or", "not",
-    "&", "|", "^", "~", "<<", ">>", "<>"};
+    "&", "|", "^", "~", "<<", ">>", "<>" };
 
 vector<string> punctuation_list = {
     "(",
@@ -66,28 +66,28 @@ void print_symbolsTable()
     cout << "\nSymbol Table:\n";
     cout << "--------------------------------------------------------------------------------------------------------" << endl;
     cout << setw(6) << "Index"
-         << setw(15) << "Identifier"
-         << setw(10) << "Type"
-         << setw(20) << "Scope"
-         << setw(25) << "Value" << endl;
+        << setw(15) << "Identifier"
+        << setw(10) << "Type"
+        << setw(20) << "Scope"
+        << setw(25) << "Value" << endl;
     cout << "--------------------------------------------------------------------------------------------------------" << endl;
 
     for (size_t i = 0; i < identifiers_list.size(); ++i)
     {
-        const auto &id = identifiers_list[i];
+        const auto& id = identifiers_list[i];
         cout << setw(6) << i
-             << setw(15) << id.name
-             << setw(10) << id.type
-             << setw(20) << id.scope
-             << setw(25) << (id.value.empty() ? "-" : id.value) << endl;
+            << setw(15) << id.name
+            << setw(10) << id.type
+            << setw(20) << id.scope
+            << setw(25) << (id.value.empty() ? "-" : id.value) << endl;
     }
     cout << "--------------------------------------------------------------------------------------------------------" << endl;
 };
 
 ///////////////////////////////////////////////////////////////////
-bool isKeyword(const string &word)
+bool isKeyword(const string& word)
 {
-    for (const string &keyword : python_keywords)
+    for (const string& keyword : python_keywords)
     {
         if (word == keyword)
         {
@@ -98,9 +98,9 @@ bool isKeyword(const string &word)
 }
 ///////////////////////////////////////////////////////////////////
 
-bool isOperator(const string &word)
+bool isOperator(const string& word)
 {
-    for (const string &op : operators_list)
+    for (const string& op : operators_list)
     {
         if (word == op)
         {
@@ -111,9 +111,9 @@ bool isOperator(const string &word)
 }
 ///////////////////////////////////////////////////////////////////
 
-bool isPunctuation(const string &word)
+bool isPunctuation(const string& word)
 {
-    for (const string &punc : punctuation_list)
+    for (const string& punc : punctuation_list)
     {
         if (word == punc)
         {
@@ -123,7 +123,7 @@ bool isPunctuation(const string &word)
     return false;
 }
 ///////////////////////////////////////////////////////////////////
-bool isIsolated(size_t i, size_t length, const string &line)
+bool isIsolated(size_t i, size_t length, const string& line)
 {
     string op = line.substr(i, length);
 
@@ -138,7 +138,7 @@ bool isIsolated(size_t i, size_t length, const string &line)
 }
 ///////////////////////////////////////////////////////////////////
 
-bool isNumeric(const string &word)
+bool isNumeric(const string& word)
 {
     static const regex number_regex(R"(^-?\d+(\.\d+)?)");
     return regex_match(word, number_regex);
@@ -146,7 +146,7 @@ bool isNumeric(const string &word)
 
 ///////////////////////////////////////////////////////////////////
 
-bool isexpocase(const string &line, size_t i)
+bool isexpocase(const string& line, size_t i)
 {
     if (i == 0 || i + 2 >= line.size())
         return false;
@@ -172,14 +172,14 @@ bool isexpocase(const string &line, size_t i)
 }
 ///////////////////////////////////////////////////////////////////
 
-bool ishexa(const string &word)
+bool ishexa(const string& word)
 {
     static const regex hex_regex(R"(^0[xX][0-9a-fA-F]+$)");
     return regex_match(word, hex_regex);
 }
 
 ///////////////////////////////////////////////////////////////////
-int availableIdentifiers(const string &word, const string &scope)
+int availableIdentifiers(const string& word, const string& scope)
 {
     for (int i = 0; i < identifiers_list.size(); i++)
     {
@@ -192,9 +192,9 @@ int availableIdentifiers(const string &word, const string &scope)
 };
 /////////////////////////////////////////////////
 
-bool isFunction(const string &word)
+bool isFunction(const string& word)
 {
-    for (const string &function : functions_list)
+    for (const string& function : functions_list)
     {
         if (word == function)
         {
@@ -206,7 +206,7 @@ bool isFunction(const string &word)
 
 ////////////////////////////////////////////////
 
-void detectDataType(const string &identifier, const string &value, const string &scope)
+void detectDataType(const string& identifier, const string& value, const string& scope)
 {
 
     string cleanedVal = value;
@@ -217,7 +217,7 @@ void detectDataType(const string &identifier, const string &value, const string 
     regex hexPattern(R"(0[xX][0-9a-fA-F]+)");
     regex numericPattern(R"(^-?\d+(\.\d+)?([eE][+-]?\d+)?$)");
 
-    for (const auto &id : identifiers_list)
+    for (const auto& id : identifiers_list)
         if (id.name == identifier && id.scope == scope)
             return;
 
@@ -285,8 +285,8 @@ void detectDataType(const string &identifier, const string &value, const string 
             // Check if the expression is followed by division (e.g., (2 + 8) / 4)
             size_t closingParen = cleanedVal.rfind(')');
             bool followedByDiv = (closingParen != string::npos &&
-                                  closingParen + 1 < cleanedVal.size() &&
-                                  cleanedVal[closingParen + 1] == '/');
+                closingParen + 1 < cleanedVal.size() &&
+                cleanedVal[closingParen + 1] == '/');
 
             type = (hasFloat || hasExpo || followedByDiv) ? "float" : "int";
         }
@@ -328,7 +328,7 @@ void detectDataType(const string &identifier, const string &value, const string 
                     }
                     else
                     {
-                        for (const auto &id : identifiers_list)
+                        for (const auto& id : identifiers_list)
                         {
                             if (id.name == token)
                             {
@@ -353,7 +353,7 @@ void detectDataType(const string &identifier, const string &value, const string 
             type = "int";
     }
 
-    identifiers_list.push_back({identifier, type, scope, cleanedVal});
+    identifiers_list.push_back({ identifier, type, scope, cleanedVal });
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -367,7 +367,7 @@ string removecomments(string line)
     return line;
 }
 ////////////////////        remove multiline comments function //////////////////////////////////
-vector<string> removemultiline(const string &file)
+vector<string> removemultiline(const string& file)
 {
     ifstream pyFile(file);
 
@@ -391,7 +391,7 @@ vector<string> removemultiline(const string &file)
 
     for (int i = 0; i < allLines.size(); i++)
     {
-        string &currentLine = allLines[i];
+        string& currentLine = allLines[i];
         string newLine;
         for (size_t j = 0; j < currentLine.size(); j++)
         {
@@ -479,7 +479,7 @@ vector<string> getLiterals(string line)
     return literals;
 }
 
-void handleIndentation(const string &line, stack<int> &indentStack, stack<string> &scopeStack, string &currentScope)
+void handleIndentation(const string& line, stack<int>& indentStack, stack<string>& scopeStack, string& currentScope)
 {
     int spaces = 0;
     for (char c : line)
@@ -536,13 +536,13 @@ void handleIndentation(const string &line, stack<int> &indentStack, stack<string
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////// ERROR HANDLING ////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bool isCommentLine2(const string &line)
+bool isCommentLine2(const string& line)
 {
     size_t firstChar = line.find_first_not_of(" \t");
     return firstChar != string::npos && line[firstChar] == '#';
 }
 ///////////////////////////////////////////////////////////////////
-bool isCommentLine(const string &line)
+bool isCommentLine(const string& line)
 {
     bool inSingleQuote = false;
     bool inDoubleQuote = false;
@@ -569,7 +569,7 @@ bool isCommentLine(const string &line)
     return false; // No standalone '#' found
 }
 //////////////////////////////////   invalid numbers ///////////////////////////////////////
-bool check_invalidnumber(const vector<string> &lines)
+bool check_invalidnumber(const vector<string>& lines)
 {
     bool founderror = false;
 
@@ -587,7 +587,7 @@ bool check_invalidnumber(const vector<string> &lines)
 
     for (size_t lineNum = 0; lineNum < lines.size(); ++lineNum)
     {
-        const string &line = lines[lineNum];
+        const string& line = lines[lineNum];
         if (isCommentLine(line))
             continue;
         istringstream iss(line);
@@ -600,7 +600,7 @@ bool check_invalidnumber(const vector<string> &lines)
             if (regex_search(word, invalidNumberPattern))
             {
                 cout << "Invalid number format found at line " << (lineNum + 1)
-                     << ": " << word << endl;
+                    << ": " << word << endl;
                 founderror = true;
             }
 
@@ -608,7 +608,7 @@ bool check_invalidnumber(const vector<string> &lines)
             if (regex_match(word, leadingZeroPattern))
             {
                 cout << "Invalid number with leading zeros found at line " << (lineNum + 1)
-                     << ": " << word << endl;
+                    << ": " << word << endl;
                 founderror = true;
             }
 
@@ -616,13 +616,13 @@ bool check_invalidnumber(const vector<string> &lines)
             if (regex_match(word, invalidExponentialPattern))
             {
                 cout << "Invalid exponential number format found at line " << (lineNum + 1)
-                     << ": " << word << endl;
+                    << ": " << word << endl;
                 founderror = true;
             }
             if (regex_match(word, invalid_hex_regex))
             {
                 cout << "Invalid hexadecimal number format found at line " << (lineNum + 1)
-                     << ": " << word << endl;
+                    << ": " << word << endl;
                 founderror = true;
             }
         }
@@ -632,7 +632,7 @@ bool check_invalidnumber(const vector<string> &lines)
 
 //////////////////////////////////////////////////////////////////
 //////////////////////////////// invalid operators/////////////////////////////////
-bool check_invalid_operators(const vector<string> &lines)
+bool check_invalid_operators(const vector<string>& lines)
 {
     bool founderror = false;
 
@@ -641,7 +641,7 @@ bool check_invalid_operators(const vector<string> &lines)
 
     for (size_t lineNum = 0; lineNum < lines.size(); ++lineNum)
     {
-        const string &line = lines[lineNum];
+        const string& line = lines[lineNum];
         if (isCommentLine(line))
             continue;
 
@@ -654,7 +654,7 @@ bool check_invalid_operators(const vector<string> &lines)
             if (regex_search(word, invalidOperatorPattern))
             {
                 cout << "Invalid operator found at line " << (lineNum + 1)
-                     << ": " << word << endl;
+                    << ": " << word << endl;
                 founderror = true;
             }
         }
@@ -666,13 +666,13 @@ bool check_invalid_operators(const vector<string> &lines)
 //////////////////////////////////////////////////////////////////////////
 
 // unterminated string literals
-bool check_unterminatedStrings(const vector<string> &lines)
+bool check_unterminatedStrings(const vector<string>& lines)
 {
     bool foundError = false;
 
     for (int i = 0; i < lines.size(); i++)
     {
-        const string &line = lines[i];
+        const string& line = lines[i];
         if (isCommentLine2(line))
             continue;
 
@@ -691,7 +691,7 @@ bool check_unterminatedStrings(const vector<string> &lines)
 /////////////////////////////////////////////////////////////////////////////
 
 // check for invalid charachters (NOT IN STRING LITERALS OR MULTILINE COMMENTS)
-bool check_invalidCharacters(const vector<string> &lines)
+bool check_invalidCharacters(const vector<string>& lines)
 {
     regex invalidPattern(R"([\b\w]*[@$&][\w\b]*)");
     bool inMultiline = false;
@@ -730,7 +730,7 @@ bool check_invalidCharacters(const vector<string> &lines)
     return errorFound;
 }
 
-bool check_invalidIdentifiers(const vector<string> &lines)
+bool check_invalidIdentifiers(const vector<string>& lines)
 {
     bool errorFound = false;
 
@@ -741,7 +741,7 @@ bool check_invalidIdentifiers(const vector<string> &lines)
 
     for (size_t i = 0; i < lines.size(); ++i)
     {
-        const string &line = lines[i];
+        const string& line = lines[i];
         if (isCommentLine(line))
             continue;
         istringstream iss(line);
@@ -775,7 +775,7 @@ bool check_invalidIdentifiers(const vector<string> &lines)
 }
 
 ////////////////////////// misiing colon (:)////////////////
-bool check_missingColons(const vector<string> &lines)
+bool check_missingColons(const vector<string>& lines)
 {
     bool foundError = false;
     regex blockStartPattern(R"(^\s*(def|if|elif|else|for|while|class)\b[^\n:]*\s*$)");
@@ -799,7 +799,7 @@ bool check_missingColons(const vector<string> &lines)
 
 /////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////// handle unclosed brackets /////////////////////////////////
-bool check_unclosedBrackets(const vector<string> &lines)
+bool check_unclosedBrackets(const vector<string>& lines)
 {
     bool errorFound = false;
     int parenCount = 0; // 3ashan  ()
@@ -807,7 +807,7 @@ bool check_unclosedBrackets(const vector<string> &lines)
 
     for (size_t lineNum = 0; lineNum < lines.size(); ++lineNum)
     {
-        const string &line = lines[lineNum];
+        const string& line = lines[lineNum];
 
         if (isCommentLine(line))
         {
@@ -863,7 +863,7 @@ bool check_unclosedBrackets(const vector<string> &lines)
     return errorFound;
 }
 
-bool check_indentationMismatch(const vector<string> &lines)
+bool check_indentationMismatch(const vector<string>& lines)
 {
     bool errorfound = false;
     stack<int> indentStack;
@@ -871,7 +871,7 @@ bool check_indentationMismatch(const vector<string> &lines)
 
     for (int i = 0; i < lines.size(); ++i)
     {
-        const string &line = lines[i];
+        const string& line = lines[i];
         int spaces = 0;
         if (isCommentLine(line))
         {
@@ -914,10 +914,19 @@ bool check_indentationMismatch(const vector<string> &lines)
 
 ///////////////////////////////////////////////////////////
 
-bool handleErrors(const vector<string> &lines)
+bool handleErrors(const vector<string>& lines)
 {
     bool errorFound = false;
-    errorFound = (check_invalidCharacters(lines) || check_unterminatedStrings(lines) || check_invalidnumber(lines) || check_invalid_operators(lines) || check_invalidIdentifiers(lines) || check_unclosedBrackets(lines) || check_missingColons(lines) || check_indentationMismatch(lines));
+    // to run all errors b3den ywa2f 
+    errorFound |= check_invalidCharacters(lines);
+    errorFound |= check_unterminatedStrings(lines);
+    errorFound |= check_invalidnumber(lines);
+    errorFound |= check_invalid_operators(lines);
+    errorFound |= check_invalidIdentifiers(lines);
+    errorFound |= check_unclosedBrackets(lines);
+    errorFound |= check_missingColons(lines);
+    errorFound |= check_indentationMismatch(lines);
+
     return errorFound;
 }
 
@@ -971,7 +980,7 @@ int main()
                 // Add function name as identifier to global scope
                 if (availableIdentifiers(funcName, "global") == -1)
                 {
-                    identifiers_list.push_back({funcName, "function", "global", ""});
+                    identifiers_list.push_back({ funcName, "function", "global", "" });
                     functions_list.push_back(funcName);
                 }
 
@@ -987,24 +996,24 @@ int main()
 
                 functionIndentLevels[funcName] = spaces;
 
-                auto splitAndClean = [](const string &str, char delim)
-                {
-                    vector<string> tokens;
-                    stringstream ss(str);
-                    string token;
-                    while (getline(ss, token, delim))
+                auto splitAndClean = [](const string& str, char delim)
                     {
-                        token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
-                        tokens.push_back(token);
-                    }
-                    return tokens;
-                };
+                        vector<string> tokens;
+                        stringstream ss(str);
+                        string token;
+                        while (getline(ss, token, delim))
+                        {
+                            token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
+                            tokens.push_back(token);
+                        }
+                        return tokens;
+                    };
 
                 vector<string> params = splitAndClean(paramSection, ',');
 
                 for (size_t i = 0; i < params.size(); ++i)
                 {
-                    const string &param = params[i];
+                    const string& param = params[i];
                     size_t eq = param.find('=');
                     if (eq != string::npos)
                     {
@@ -1026,7 +1035,7 @@ int main()
                     {
                         if (availableIdentifiers(param, currentScope) == -1)
                         {
-                            identifiers_list.push_back({param, "unknown", currentScope});
+                            identifiers_list.push_back({ param, "unknown", currentScope });
                         }
                         cout << "identifier: <id," << availableIdentifiers(param, currentScope) << ">\t" << param << endl;
                     }
@@ -1064,18 +1073,18 @@ int main()
 
             if (leftHasComma && rightHasComma)
             {
-                auto splitAndClean = [](const string &str, char delim)
-                {
-                    vector<string> tokens;
-                    stringstream ss(str);
-                    string token;
-                    while (getline(ss, token, delim))
+                auto splitAndClean = [](const string& str, char delim)
                     {
-                        token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
-                        tokens.push_back(token);
-                    }
-                    return tokens;
-                };
+                        vector<string> tokens;
+                        stringstream ss(str);
+                        string token;
+                        while (getline(ss, token, delim))
+                        {
+                            token.erase(remove_if(token.begin(), token.end(), ::isspace), token.end());
+                            tokens.push_back(token);
+                        }
+                        return tokens;
+                    };
 
                 vector<string> vars = splitAndClean(left, ',');
                 vector<string> values = splitAndClean(right, ',');
@@ -1097,7 +1106,7 @@ int main()
 
         vector<string> literals = getLiterals(cleanedLine);
 
-        for (const string &literal : literals)
+        for (const string& literal : literals)
         {
             size_t pos = cleanedLine.find(literal);
             if (pos != string::npos)
@@ -1162,8 +1171,8 @@ int main()
                             }
                             size_t equalPos = line.find('=');
                             string value = (equalPos != string::npos && equalPos < line.size() - 1)
-                                               ? line.substr(equalPos + 1)
-                                               : "";
+                                ? line.substr(equalPos + 1)
+                                : "";
                             size_t commaPos = value.find(',');
                             if (commaPos != string::npos)
                                 value = value.substr(0, commaPos);
@@ -1224,8 +1233,8 @@ int main()
                             }
                             size_t equalPos = line.find('=');
                             string value = (equalPos != string::npos && equalPos < line.size() - 1)
-                                               ? line.substr(equalPos + 1)
-                                               : "";
+                                ? line.substr(equalPos + 1)
+                                : "";
                             size_t commaPos = value.find(',');
                             if (commaPos != string::npos)
                                 value = value.substr(0, commaPos);
@@ -1254,9 +1263,9 @@ int main()
             }
 
             if ((isOperator(one_syntax) && isIsolated(i, 1, cleanedLine) ||
-                 (isPunctuation(one_syntax) &&
-                  !(c == '.' && i > 0 && i + 1 < cleanedLine.size() &&
-                    isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))))
+                (isPunctuation(one_syntax) &&
+                    !(c == '.' && i > 0 && i + 1 < cleanedLine.size() &&
+                        isdigit(cleanedLine[i - 1]) && isdigit(cleanedLine[i + 1])))))
             {
                 if (!currentToken.empty())
                 {
@@ -1288,8 +1297,8 @@ int main()
                             }
                             size_t equalPos = line.find('=');
                             string value = (equalPos != string::npos && equalPos < line.size() - 1)
-                                               ? line.substr(equalPos + 1)
-                                               : "";
+                                ? line.substr(equalPos + 1)
+                                : "";
                             size_t commaPos = value.find(',');
                             if (commaPos != string::npos)
                                 value = value.substr(0, commaPos);
@@ -1348,8 +1357,8 @@ int main()
                             }
                             size_t equalPos = line.find('=');
                             string value = (equalPos != string::npos && equalPos < line.size() - 1)
-                                               ? line.substr(equalPos + 1)
-                                               : "";
+                                ? line.substr(equalPos + 1)
+                                : "";
                             detectDataType(currentToken, value, currentScope);
 
                             cout << "identifier: <id," << availableIdentifiers(currentToken, currentScope) << ">\t" << currentToken << endl;
@@ -1394,8 +1403,8 @@ int main()
                     }
                     size_t equalPos = line.find('=');
                     string value = (equalPos != string::npos && equalPos < line.size() - 1)
-                                       ? line.substr(equalPos + 1)
-                                       : "";
+                        ? line.substr(equalPos + 1)
+                        : "";
                     size_t commaPos = value.find(',');
                     if (commaPos != string::npos)
                         value = value.substr(0, commaPos);
@@ -1411,7 +1420,7 @@ int main()
             currentToken.clear();
         }
 
-        for (const string &literal : literals)
+        for (const string& literal : literals)
         {
             cout << "<StringLiteral," << literal << ">" << endl;
         }
