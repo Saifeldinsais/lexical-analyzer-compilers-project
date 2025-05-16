@@ -1,15 +1,15 @@
 def find_word_in_string(text, word):
-    text = text.lower()
-    word = word.lower()
+    text = text
+    word = word
     x = 11.5
-    return word in text
+    return word
 
 
 """
 ay 7aga ay 7a$$$$$ga ay 7aga ay 7aga ay 7aga'''
 """
 
-'''hello hello hello hello'''; idk = 11
+'''hello hello hello hello'''
 
 
 def main():
@@ -19,7 +19,8 @@ def main():
 
     a,b = 5555, 10 
 
-    print(a + "\t" +b + "\t")
+    print(a + b)
+    print(a,b)
 
     
     text = input("Enter the string to search in: ")
